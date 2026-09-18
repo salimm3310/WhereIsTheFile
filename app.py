@@ -202,9 +202,14 @@ if 'user_info' not in st.session_state:
 if 'active_shipments' not in st.session_state:
     st.session_state['active_shipments'] = [
         {"id": 1, "file_num": "260862115", "company": "U.S.C", "bkg": "CFA0951367", "inv": "3A - 3B", "status": "Under Operation", "holded": 0, "h_reason": "", "last_up": "2026-09-18 10:00:00", "creator": "SALEM Admin"},
-        {"id": 2, "file_num": "260862116", "company": "CFA Global", "bkg": "CFA0951368", "inv": "104B", "status": "Waiting BL", "holded": 0, "h_reason": "", "last_up": "2026-09-18 11:30:00", "creator": "أحمد علي"},
+        {"id": 2, "file_num": "260862116", "company": "CFA Global", "bkg": "CFA0951368", "inv": "104B", "status": "Waiting BL", "holded": 0, "h_reason": "", "last_up": "2026-09-18 11:30:00", "creator": "SALEM Admin"},
         {"id": 3, "file_num": "260862117", "company": "Al-Salem Trading", "bkg": "CFA0951369", "inv": "88C", "status": "Ready to be invoiced", "holded": 0, "h_reason": "", "last_up": "2026-09-18 12:15:00", "creator": "SALEM Admin"},
-        {"id": 4, "file_num": "260862118", "company": "U.S.C", "bkg": "CFA0951370", "inv": "99A", "status": "Draft", "holded": 1, "h_reason": "في انتظار موافقة العميل", "last_up": "2026-09-18 09:00:00", "creator": "محمود حسن"}
+        {"id": 4, "file_num": "260862118", "company": "U.S.C", "bkg": "CFA0951370", "inv": "99A", "status": "Draft", "holded": 1, "h_reason": "في انتظار موافقة العميل", "last_up": "2026-09-18 09:00:00", "creator": "SALEM Admin"}
+    ]
+
+if 'internal_messages' not in st.session_state:
+    st.session_state['internal_messages'] = [
+        {"sender": "النظام", "text": "مرحباً بك في منصة U.S.C Logistics. جاري متابعة المهل الحالية.", "time": "10:00 AM"}
     ]
 
 # الهيدر واللوجو الرئيسي
@@ -482,7 +487,7 @@ if st.session_state['logged_in']:
                     st.success(f"🎉 تم حفظ الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 4: المراسلات والواتساب المباشر
+    # التبويب 4: المراسلات والواتساب المباشر (المحدث)
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("💬 المراسلات الداخلية والتكامل مع WhatsApp")
@@ -493,19 +498,41 @@ if st.session_state['logged_in']:
             col_send, col_inbox = st.columns([2, 3])
             with col_send:
                 st.markdown("### 📤 إرسال رسالة داخلية")
-                st.selectbox("إلى الموظف:", ["أحمد علي (مُشغّل)", "محمود حسن (خدمة عملاء)"])
-                st.text_area("نص الرسالة:", height=100)
+                
+                # جلب قوام الموظفين المعتمدين حقيقياً
+                users_query = "SELECT user_id, full_name, role_group FROM users WHERE is_active = 1"
+                res_users = execute_query(users_query, fetch=True)
+
+                if res_users and len(res_users[1]) > 0:
+                    employee_list = [f"{r[1]} ({r[2]})" for r in res_users[1]]
+                else:
+                    employee_list = ["SALEM Admin (Admin)", "فريق التشغيل (Operations)", "فريق خدمة العملاء (CS)"]
+
+                target_emp = st.selectbox("إلى الموظف / الفريق:", employee_list)
+                msg_body = st.text_area("نص الرسالة:", height=100)
+                
                 if st.button("🚀 إرسال الرسالة الداخلية"):
-                    st.success("✅ تم إرسال الرسالة بنجاح!")
+                    if msg_body.strip() != "":
+                        st.session_state['internal_messages'].append({
+                            "sender": user['full_name'],
+                            "text": msg_body.strip(),
+                            "time": datetime.now().strftime('%H:%M %p')
+                        })
+                        st.success("✅ تم إرسال الرسالة الداخلية وتوثيقها بنجاح!")
+                        st.rerun()
+                    else:
+                        st.warning("يرجى كتابة نص الرسالة أولاً.")
+
             with col_inbox:
                 st.markdown("### 📥 صندوق الرسائل الواردة")
-                st.markdown("""
-                <div class="chat-bubble-in">
-                    <strong>رسالة من: أحمد علي</strong><br>
-                    <span style="color: #475569;">تم استلام البوليسة رقم CFA0951367 وفي انتظار موافقة العميل</span><br>
-                    <small style="color: #94a3b8;">📅 اليوم - 10:30 AM</small>
-                </div>
-                """, unsafe_allow_html=True)
+                for msg in reversed(st.session_state['internal_messages']):
+                    st.markdown(f"""
+                    <div class="chat-bubble-in">
+                        <strong>رسالة من: {msg['sender']}</strong><br>
+                        <span style="color: #475569;">{msg['text']}</span><br>
+                        <small style="color: #94a3b8;">📅 {msg['time']}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
 
         with tab_wa:
             st.markdown("### 📱 إرسال إشعار وتحديث عبر WhatsApp Direct")
@@ -543,9 +570,7 @@ if st.session_state['logged_in']:
 
         st.success("✅ قاعدة التقييم المعتمدة بالنظام: 1 نقطة لكل شحنة متوافقة ومكتملة.")
         st.dataframe(pd.DataFrame([
-            {"الموظف": "SALEM Admin", "عدد الشحنات المنجزة": 12, "نقاط الإنجاز (+1)": 12, "نقاط التأخير (-1)": 0, "صافي التقييم": 12},
-            {"الموظف": "أحمد علي", "عدد الشحنات المنجزة": 8, "نقاط الإنجاز (+1)": 8, "نقاط التأخير (-1)": -1, "صافي التقييم": 7},
-            {"الموظف": "محمود حسن", "عدد الشحنات المنجزة": 5, "نقاط الإنجاز (+1)": 5, "نقاط التأخير (-1)": 0, "صافي التقييم": 5}
+            {"الموظف": "SALEM Admin", "عدد الشحنات المنجزة": len(st.session_state['active_shipments']), "نقاط الإنجاز (+1)": len(st.session_state['active_shipments']), "نقاط التأخير (-1)": 0, "صافي التقييم": len(st.session_state['active_shipments'])}
         ]), use_container_width=True)
 
     # ---------------------------------------------------------
@@ -565,7 +590,5 @@ if st.session_state['logged_in']:
     elif choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
         st.subheader("⚙️ لوحة إدارة الحسابات والصلاحيات وSLA (SALEM Control Panel)")
         st.dataframe(pd.DataFrame([
-            {"#": 1, "الاسم": "SALEM Admin", "الهاتف": "01212231815", "المجموعة": "Admin", "الحالة": "Active"},
-            {"#": 2, "الاسم": "أحمد علي", "الهاتف": "01012345678", "المجموعة": "Operator", "الحالة": "Active"},
-            {"#": 3, "الاسم": "محمود حسن", "الهاتف": "01112345678", "المجموعة": "CS", "الحالة": "Active"}
+            {"#": 1, "الاسم": "SALEM Admin", "الهاتف": "01212231815", "المجموعة": "Admin", "الحالة": "Active"}
         ]), use_container_width=True)
