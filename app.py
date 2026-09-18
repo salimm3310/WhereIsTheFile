@@ -225,19 +225,17 @@ def calculate_sla_status(current_status, last_updated_at):
         return "متأخر (Late)", "status-badge-late", elapsed_hours
 
 # =========================================================
-# 4. الهيدر الرئيسي واللوجو المعتمد (logo.jpg)
+# 4. الهيدر الرئيسي مع اللوجو في سطر منفصل وبحجم مكبر
 # =========================================================
-col_h1, col_h2, col_h3 = st.columns([1, 2, 1])
-with col_h2:
-    col_img, col_txt = st.columns([1, 3])
-    with col_img:
-        try:
-            st.image("logo.jpg", width=110)
-        except:
-            st.markdown("📂")
-    with col_txt:
-        st.markdown("<h1 style='color: #2563eb; margin:0; font-size: 28px;'>تطبيق فين الملف؟</h1>", unsafe_allow_html=True)
+col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
+with col_logo2:
+    try:
+        # اللوجو في سطر منفصل في الأعلى وبحجم مكبر (1100px)
+        st.image("logo.jpg", width=1100)
+    except:
+        st.markdown("<h1 style='text-align: center; font-size: 80px;'>📂</h1>", unsafe_allow_html=True)
 
+st.markdown("<h1 style='text-align: center; color: #2563eb; margin-top:10px;'>تطبيق فين الملف؟</h1>", unsafe_allow_html=True)
 st.markdown("<h2 class='main-header'>Mohamed Salem OPS App</h2>", unsafe_allow_html=True)
 st.markdown("<p class='sub-header'>نظام إدارة وتتبع الملفات</p>", unsafe_allow_html=True)
 
@@ -283,12 +281,13 @@ if not st.session_state['logged_in']:
         col_r1, col_r2, col_r3 = st.columns([1, 2, 1])
         with col_r2:
             st.markdown("### 📝 طلب إنشاء حساب جديد")
-            st.info("💡 سيتم إرسال طلب الحساب لمدير البرنامج لتمكينه واعتماده قبل الدخول.")
+            st.info("💡 سيتم إرسال طلب الحساب لمدير البرنامج لتمكينه وتحديد مجموعته واعتماده قبل الدخول.")
             with st.form("register_form"):
                 reg_name = st.text_input("الاسم:")
                 reg_phone = st.text_input("رقم الهاتف (سيستخدم كاسم مستخدم):")
                 reg_pass = st.text_input("كلمة المرور:", type="password")
-                reg_group = st.selectbox("المجموعة المطلوب الانضمام لها:", ["OPS", "Sys 1", "Sys 2", "Admin"])
+                
+                # تم حذف اختيار المجموعة بناءً على طلبك، لتكون الخيار الحصري للمدير عند الاعتماد
                 
                 submit_reg = st.form_submit_button("إرسال طلب التسجيل")
 
@@ -299,11 +298,11 @@ if not st.session_state['logged_in']:
                             "full_name": reg_name.strip(),
                             "phone_number": reg_phone.strip(),
                             "password_hash": make_hashes(reg_pass.strip()),
-                            "role_group": reg_group,
+                            "role_group": "Unassigned",  # سيتم تحديد المجموعة بواسطة المدير عند الاعتماد
                             "status": "Pending"
                         }
                         st.session_state['registered_users'].append(new_u)
-                        st.success("🎉 تم إرسال طلب الحساب بنجاح! يرجى التواصل مع مدير البرنامج (Mohamed Salem) لاعتماده وتنشيطه.")
+                        st.success("🎉 تم إرسال طلب الحساب بنجاح! يرجى التواصل مع مدير البرنامج (Mohamed Salem) لتحديد مجموعتك وتنشيط حسابك.")
                     else:
                         st.error("⚠️ يرجى تعبئة كافة الحقول المطلوبة.")
 
@@ -669,15 +668,15 @@ else:
         ]), use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 7: لوحة التحكم الإدارية (تعديل SLA + اعتماد الحسابات والمجموعات الـ 4)
+    # التبويب 7: لوحة التحكم الإدارية (اعتماد وتحديد مجموعة الحسابات الحصري)
     # ---------------------------------------------------------
     elif choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
-        st.subheader("⚙️ لوحة تحكم المدير وتعديل المهل SLA وتنشيط الحسابات (Mohamed Salem Control Panel)")
+        st.subheader("⚙️ لوحة تحكم المدير وتحديد المجموعات وتنشيط الحسابات (Mohamed Salem Control Panel)")
 
-        tab_users_act, tab_sla_cfg = st.tabs(["👥 اعتماد وتنشيط حسابات الموظفين", "⏱️ إعدادات المهل SLA"])
+        tab_users_act, tab_sla_cfg = st.tabs(["👥 اعتماد وتنشيط تحديد مجموعات الحسابات", "⏱️ إعدادات المهل SLA"])
 
         with tab_users_act:
-            st.markdown("### 👥 طلبات الحسابات بانتظار اعتماد المدير")
+            st.markdown("### 👥 طلبات الحسابات بانتظار تحديد المجموعة والاعتماد")
             pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
             
             if len(pending_list) > 0:
@@ -685,11 +684,18 @@ else:
                     c_u1, c_u2, c_u3, c_u4 = st.columns([2, 2, 2, 2])
                     c_u1.write(f"**الاسم:** {p_user['full_name']}")
                     c_u2.write(f"**الهاتف:** {p_user['phone_number']}")
-                    c_u3.write(f"**المجموعة المطلوب:** {p_user['role_group']}")
+                    
+                    # الخيار الحصري للمدير لتحديد المجموعة الصلاحية
+                    assigned_group = c_u3.selectbox(
+                        "تحديد المجموعة الصلاحية:", 
+                        ["OPS", "Sys 1", "Sys 2", "Admin"], 
+                        key=f"grp_sel_{p_user['user_id']}"
+                    )
                     
                     if c_u4.button(f"✅ اعتماد وتفعيل الحساب", key=f"act_{p_user['user_id']}"):
+                        p_user['role_group'] = assigned_group
                         p_user['status'] = "Active"
-                        st.success(f"🎉 تم اعتماد وتفعيل حساب {p_user['full_name']} بالمجموعة ({p_user['role_group']}) بنجاح!")
+                        st.success(f"🎉 تم اعتماد وتفعيل حساب {p_user['full_name']} بالمجموعة ({assigned_group}) بنجاح!")
                         st.rerun()
             else:
                 st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
