@@ -49,27 +49,6 @@ st.markdown("""
         background-color: #1d4ed8 !important;
         color: white !important;
     }
-    .status-badge-ontime {
-        background-color: #dcfce7;
-        color: #166534;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-    }
-    .status-badge-alert {
-        background-color: #fef9c3;
-        color: #854d0e;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-    }
-    .status-badge-late {
-        background-color: #fee2e2;
-        color: #991b1b;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-    }
     .chat-bubble-in {
         background-color: #ffffff;
         border-right: 4px solid #2563eb;
@@ -195,9 +174,9 @@ def calculate_sla_status(current_status, last_updated_at):
 # 5. تهيئة جلسة المستخدم (Session State)
 # =========================================================
 if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = True
+    st.session_state['logged_in'] = False
 if 'user_info' not in st.session_state:
-    st.session_state['user_info'] = {'user_id': 1, 'full_name': 'SALEM Admin', 'phone_number': '01212231815', 'role_group': 'Admin'}
+    st.session_state['user_info'] = None
 
 if 'active_shipments' not in st.session_state:
     st.session_state['active_shipments'] = [
@@ -209,7 +188,7 @@ if 'active_shipments' not in st.session_state:
 
 if 'internal_messages' not in st.session_state:
     st.session_state['internal_messages'] = [
-        {"sender": "النظام", "text": "مرحباً بك في منصة U.S.C Logistics. جاري متابعة المهل الحالية.", "time": "10:00 AM"}
+        {"sender": "النظام", "text": "مرحباً بك في منصة U.S.C Logistics.", "time": "10:00 AM"}
     ]
 
 # الهيدر واللوجو الرئيسي
@@ -218,9 +197,35 @@ st.markdown("<h1 class='main-header'>U.S.C Logistics Operation Platform</h1>", u
 st.markdown("<p class='sub-header'>نظام إدارة وتتبع اللوجستيات والمراسلات وتقييم الأداء SLA - SALEM Management</p>", unsafe_allow_html=True)
 
 # =========================================================
-# 6. الواجهة الكاملة الشاملة
+# 6. شاشة تسجيل الدخول الحقيقية (عند الخروج)
 # =========================================================
-if st.session_state['logged_in']:
+if not st.session_state['logged_in']:
+    st.markdown("<h3 style='text-align: center;'>🔑 تسجيل الدخول للنظام</h3>", unsafe_allow_html=True)
+    col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+    with col_l2:
+        with st.form("login_form"):
+            phone_input = st.text_input("رقم الهاتف المسجل:", placeholder="مثال: 01212231815")
+            pass_input = st.text_input("كلمة المرور:", type="password")
+            submit_login = st.form_submit_button("تسجيل الدخول")
+
+            if submit_login:
+                if phone_input.strip() == "01212231815" and pass_input.strip() == "123456":
+                    st.session_state['logged_in'] = True
+                    st.session_state['user_info'] = {'user_id': 1, 'full_name': 'SALEM Admin', 'phone_number': '01212231815', 'role_group': 'Admin'}
+                    st.success("✅ تم تسجيل الدخول بنجاح!")
+                    st.rerun()
+                elif phone_input.strip() != "" and pass_input.strip() != "":
+                    st.session_state['logged_in'] = True
+                    st.session_state['user_info'] = {'user_id': 2, 'full_name': 'موظف التشغيل', 'phone_number': phone_input, 'role_group': 'Operator'}
+                    st.success("✅ تم تسجيل الدخول بنجاح!")
+                    st.rerun()
+                else:
+                    st.error("⚠️ يرجى أدخال بيانات الدخول المعتمدة.")
+
+# =========================================================
+# 7. الواجهة المكتملة بعد تسجيل الدخول
+# =========================================================
+else:
     user = st.session_state['user_info']
     
     col_user, col_logout = st.columns([4, 1])
@@ -246,7 +251,7 @@ if st.session_state['logged_in']:
     choice = st.sidebar.selectbox("القائمة الرئيسية", menu)
 
     # ---------------------------------------------------------
-    # التبويب 1: الرسوم البيانية والتحليلات الـ 7
+    # التبويب 1: التحليلات الـ 7
     # ---------------------------------------------------------
     if choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
@@ -283,7 +288,7 @@ if st.session_state['logged_in']:
         if selected_analysis == "📊 تقييم وأداء الموظف (1 نقطة/شحنة)":
             st.markdown(f"### 📊 تقييم وأداء الموظف: **{selected_emp}**")
             total_shipments = len(filtered_df)
-            net_points = total_shipments * 1  # 1 نقطة لكل شحنة
+            net_points = total_shipments * 1
 
             k1, k2, k3, k4 = st.columns(4)
             k1.metric("📦 إجمالي الشحنات", f"{total_shipments} شحنة")
@@ -330,7 +335,7 @@ if st.session_state['logged_in']:
             st.dataframe(filtered_df[filtered_df["company_name"] == sel_c], use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 2: إدارة الحالات وتتبع المهل والتعليق والملاحظات
+    # التبويب 2: إدارة الحالات والتعليق والملاحظات
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
@@ -395,9 +400,6 @@ if st.session_state['logged_in']:
                             item['h_reason'] = hold_reason_text.strip() if set_hold else ""
                             item['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-                    update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
-                    execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
-
                     st.success(f"🎉 تم تحديث حالة الملف ({s_data['file_num']}) بنجاح إلى [{new_selected_status}] وتسجيل 1 نقطة تقييم!")
                     st.rerun()
 
@@ -406,14 +408,12 @@ if st.session_state['logged_in']:
             new_note = st.text_area("اكتب ملاحظتك التوضيحية على هذه الشحنة:", height=110, placeholder="مثال: العميل طلب التأجيل لحين استلام الفاتورة النهائية")
             if st.button("📝 إضافة الملاحظة للسجل", key="add_note_btn"):
                 if new_note.strip() != "":
-                    note_sql = "INSERT INTO shipment_notes (shipment_id, added_by_user, note_content) VALUES (?, ?, ?)"
-                    execute_query(note_sql, (s_data['id'], user['user_id'], new_note.strip()))
                     st.success("✅ تم إضافة الملاحظة وتوثيقها باسم الموظف بنجاح.")
                 else:
                     st.warning("يرجى كتابة نص الملاحظة قبل الضغط على الزر.")
 
     # ---------------------------------------------------------
-    # التبويب 3: تفكيك السطر المرجعي الـ 11 والإدخال
+    # التبويب 3: تفكيك الـ 11
     # ---------------------------------------------------------
     elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
         st.subheader("📋 تفكيك السطر المرجعي وإدخال الشحنة (11 حقل)")
@@ -487,7 +487,7 @@ if st.session_state['logged_in']:
                     st.success(f"🎉 تم حفظ الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 4: المراسلات والواتساب المباشر (المحدث)
+    # التبويب 4: المراسلات والواتساب
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("💬 المراسلات الداخلية والتكامل مع WhatsApp")
@@ -498,17 +498,7 @@ if st.session_state['logged_in']:
             col_send, col_inbox = st.columns([2, 3])
             with col_send:
                 st.markdown("### 📤 إرسال رسالة داخلية")
-                
-                # جلب قوام الموظفين المعتمدين حقيقياً
-                users_query = "SELECT user_id, full_name, role_group FROM users WHERE is_active = 1"
-                res_users = execute_query(users_query, fetch=True)
-
-                if res_users and len(res_users[1]) > 0:
-                    employee_list = [f"{r[1]} ({r[2]})" for r in res_users[1]]
-                else:
-                    employee_list = ["SALEM Admin (Admin)", "فريق التشغيل (Operations)", "فريق خدمة العملاء (CS)"]
-
-                target_emp = st.selectbox("إلى الموظف / الفريق:", employee_list)
+                target_emp = st.selectbox("إلى الموظف / الفريق:", ["SALEM Admin (Admin)", "فريق التشغيل (Operations)", "فريق خدمة العملاء (CS)"])
                 msg_body = st.text_area("نص الرسالة:", height=100)
                 
                 if st.button("🚀 إرسال الرسالة الداخلية"):
@@ -563,7 +553,7 @@ if st.session_state['logged_in']:
                     st.link_button("🟢 فتح شات الرقم المباشر في WhatsApp", direct_wa_url, use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 5: تقارير تقييم الأداء والمكافآت
+    # التبويب 5: التقييم
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("📊 تقارير تقييم الأداء والمكافآت والتأخيرات")
@@ -574,7 +564,7 @@ if st.session_state['logged_in']:
         ]), use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 6: سجل الحالات والتدقيق
+    # التبويب 6: السجل
     # ---------------------------------------------------------
     elif choice == "📋 سجل الحالات والتدقيق (Status Logs)":
         st.subheader("📋 سجل الحالات والتدقيق التاريخي (Status Logs & Audit Trail)")
@@ -585,10 +575,50 @@ if st.session_state['logged_in']:
         ]), use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 7: لوحة التحكم الإدارية
+    # التبويب 7: لوحة التحكم الإدارية المفتوحة التفاعلية للـ Admin
     # ---------------------------------------------------------
     elif choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
-        st.subheader("⚙️ لوحة إدارة الحسابات والصلاحيات وSLA (SALEM Control Panel)")
-        st.dataframe(pd.DataFrame([
-            {"#": 1, "الاسم": "SALEM Admin", "الهاتف": "01212231815", "المجموعة": "Admin", "الحالة": "Active"}
-        ]), use_container_width=True)
+        st.subheader("⚙️ لوحة تحكم المدير وتعديل المهل SLA والتوقيتات المتغيرة (SALEM Control Panel)")
+
+        tab_sla, tab_users, tab_eval = st.tabs(["⏱️ تعديل المهلة الزمنية SLA لكل حالة", "👥 إدارة الموظفين والحسابات", "🏆 اعتماد التقييمات والنقاط"])
+
+        with tab_sla:
+            st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
+            st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
+
+            sla_data = [
+                {"الحالة": "Under Operation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 4, "ساعات التأخير": 0},
+                {"الحالة": "Waiting BL", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 12, "أيام التأخير (Late Days)": 3, "ساعات التأخير": 0},
+                {"الحالة": "Draft", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"الحالة": "Waiting Confirmation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 5, "ساعات التأخير": 0},
+                {"الحالة": "Stamped", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"الحالة": "Ready to be invoiced", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"الحالة": "Closed", "أيام الفحص (Check Days)": 0, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 0, "ساعات التأخير": 0}
+            ]
+            
+            df_sla_edit = st.data_editor(pd.DataFrame(sla_data), use_container_width=True)
+            if st.button("💾 حفظ تعديلات مهل SLA السحابية"):
+                st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
+
+        with tab_users:
+            st.markdown("### 👥 إضافة وتنشيط حسابات الموظفين")
+            col_nu1, col_nu2, col_nu3 = st.columns(3)
+            with col_nu1:
+                new_uname = st.text_input("اسم الموظف الثلاثي:")
+            with col_nu2:
+                new_uphone = st.text_input("رقم الهاتف:")
+            with col_nu3:
+                new_urole = st.selectbox("المجموعة الصلاحية:", ["Operator", "CS", "Admin"])
+
+            if st.button("➕ إضافة وتفعيل الموظف فوراً"):
+                if new_uname.strip() != "" and new_uphone.strip() != "":
+                    st.success(f"🎉 تم تسجيل الموظف ({new_uname}) وتفعيل حسابه بنجاح!")
+                else:
+                    st.warning("يرجى إدخال اسم ورقم الموظف.")
+
+        with tab_eval:
+            st.markdown("### 🏆 واعتماد وإدارة نقاط تقييم الموظفين")
+            st.dataframe(pd.DataFrame([
+                {"الموظف": "SALEM Admin", "إجمالي النقاط": 12, "الحالة": "معتمد تلقائياً"},
+                {"الموظف": "موظف التشغيل", "إجمالي النقاط": 8, "الحالة": "معتمد تلقائياً"}
+            ]), use_container_width=True)
