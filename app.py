@@ -978,29 +978,51 @@ else:
         with tab_wa:
             st.markdown("### WhatsApp")
             
-            # اختيار الشحنة لتوليد تفاصيل الرسالة آلياً
+            # 1. تحديد نوع المستلم
+            recipient_type = st.radio("تحديد نوع المستلم:", ["العميل", "مستخدم/موظف بالبرنامج"], horizontal=True)
+
+            # 2. اختيار الشحنة المراد مراسلتها
             rows = st.session_state['active_shipments']
             shipment_options = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r for r in rows}
-            selected_ship_label = st.selectbox("اختر الشحنة لتوليد نص الرسالة تلقائياً:", list(shipment_options.keys()))
+            selected_ship_label = st.selectbox("اختر الشحنة المُراد المراسلة بشأنها:", list(shipment_options.keys()))
             selected_ship = shipment_options[selected_ship_label]
 
             col_wa1, col_wa2 = st.columns(2)
-            with col_wa1:
-                target_name = st.text_input("اسم العميل/المستلم:", value=f"شركة {selected_ship['company']}")
-                target_phone = st.text_input("رقم الهاتف", value="01212231815")
 
-            auto_gen_text = (
-                f"مرحباً أستاذ/ة (عناية شركة {selected_ship['company']})،\n\n"
+            if recipient_type == "العميل":
+                with col_wa1:
+                    target_name = st.text_input("اسم العميل / الشركة:", value=f"شركة {selected_ship['company']}")
+                    target_phone = st.text_input("رقم الهاتف", value="01212231815")
+                
+                header_greeting = f"مرحباً أستاذ/ة (عناية {target_name})"
+            else:
+                active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
+                emp_map = {f"{u['full_name']} ({u['phone_number']})": u for u in active_users_list}
+                
+                with col_wa1:
+                    selected_emp_wa = st.selectbox("اختر الموظف المستلم:", list(emp_map.keys()))
+                    target_u_obj = emp_map[selected_emp_wa]
+                    target_name = target_u_obj['full_name']
+                    target_phone = target_u_obj['phone_number']
+                    st.info(f"📱 رقم الهاتف المسجل بالنظام لـ ({target_name}): **{target_phone}**")
+
+                header_greeting = f"مرحباً أستاذ/ة {target_name}"
+
+            # القالب الموحد
+            wa_template = (
+                f"{header_greeting}\n\n"
                 f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
                 f"📂 رقم الملف: {selected_ship['file_num']}\n"
-                f"🔖 رقم الحجز (Booking): {selected_ship['bkg']}\n"
+                f"🔖 اسم الشركة: {selected_ship['company']}\n"
                 f"🧾 رقم الفاتورة: {selected_ship['inv']}\n"
                 f"📌 الحالة الحالية: {selected_ship['status']}\n\n"
-                f"تحياتنا، فريق Mohamed Salem OPS"
+                f"يرجى اتخاذ اللازم إنهاء الإجراء\n"
+                f"تحياتنا، فريق U.S.C للتشغيل\n"
+                f"M.Salem"
             )
 
             with col_wa2:
-                final_msg = st.text_area("نص الرسالة:", value=auto_gen_text, height=170)
+                final_msg = st.text_area("نص الرسالة المعاينة قبل الإرسال:", value=wa_template, height=220)
 
             if target_phone.strip() != "":
                 clean_phone = format_whatsapp_phone(target_phone)
