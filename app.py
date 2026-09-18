@@ -9,7 +9,7 @@ import plotly.express as px
 from db_connection import execute_query
 
 # =========================================================
-# 1. إعدادات الصفحة والتصميم العام للهوية البصرية وخلفية البرنامج
+# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والخطوط والشفافية
 # =========================================================
 st.set_page_config(
     page_title="فين الملف؟ - Mohamed Salem OPS App",
@@ -28,36 +28,56 @@ def get_base64_of_bin_file(bin_file):
 
 bg_base64 = get_base64_of_bin_file("background.jpg")
 
+# تطبيق زيادة شفافية الخلفية إلى 40% وتكبير الخطوط وتثقيلها (18px للعناوين، 14px للبيانات)
 st.markdown(f"""
 <style>
     .stApp {{
-        background-image: linear-gradient(rgba(248, 250, 252, 0.88), rgba(248, 250, 252, 0.88)), url("data:image/jpg;base64,{bg_base64}");
+        background-image: linear-gradient(rgba(248, 250, 252, 0.40), rgba(248, 250, 252, 0.40)), url("data:image/jpg;base64,{bg_base64}");
         background-attachment: fixed;
         background-size: cover;
         background-position: center;
         color: #0f172a;
+        font-size: 14px !important;
+        font-weight: 700 !important;
     }}
-    .main-header {{
-        text-align: center;
-        color: #1e3a8a;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-weight: 800;
-        margin-bottom: 2px;
-        font-size: 32px;
+    
+    /* عناوين البرنامج رئيسية وفرعية - 18px وثقيل جداً */
+    h1, h2, h3, .main-header {{
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
     }}
+    
     .sub-header {{
         text-align: center;
-        color: #475569;
-        font-size: 16px;
-        font-weight: 600;
+        color: #1e293b !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
         margin-bottom: 25px;
     }}
+
+    /* نصوص البيانات والجداول والحقول والقوائم المنسدلة والبطاقات - 14px وثقيل */
+    p, label, span, div, input, select, textarea, button, .stDataFrame, .stSelectbox, .stTextInput {{
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        color: #020617 !important;
+    }}
+
+    /* تحسين تباين الخانات والجداول */
+    .stDataFrame {{
+        background-color: rgba(255, 255, 255, 0.92) !important;
+        border-radius: 8px;
+        padding: 5px;
+    }}
+
     .stButton>button {{
         width: 100%;
         background-color: #2563eb !important;
         color: white !important;
         border-radius: 6px;
-        font-weight: bold;
+        font-weight: 800 !important;
+        font-size: 14px !important;
         padding: 10px;
         border: none;
     }}
@@ -65,34 +85,40 @@ st.markdown(f"""
         background-color: #1d4ed8 !important;
         color: white !important;
     }}
+
     .status-badge-ontime {{
         background-color: #dcfce7;
         color: #166534;
         padding: 4px 8px;
         border-radius: 4px;
-        font-weight: bold;
+        font-weight: 800;
+        font-size: 14px;
     }}
     .status-badge-alert {{
         background-color: #fef9c3;
         color: #854d0e;
         padding: 4px 8px;
         border-radius: 4px;
-        font-weight: bold;
+        font-weight: 800;
+        font-size: 14px;
     }}
     .status-badge-late {{
         background-color: #fee2e2;
         color: #991b1b;
         padding: 4px 8px;
         border-radius: 4px;
-        font-weight: bold;
+        font-weight: 800;
+        font-size: 14px;
     }}
     .chat-bubble-in {{
-        background-color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.95);
         border-right: 4px solid #2563eb;
         padding: 10px;
         border-radius: 6px;
         margin-bottom: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        font-size: 14px !important;
+        font-weight: 700 !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -132,7 +158,7 @@ MAIN_ADMIN = {
     "phone_number": "01212231815",
     "password_hash": make_hashes("691011"),
     "role_group": "Admin",
-    "allowed_pages": ALL_MODULES,  # للمدير كافة الشاشات
+    "allowed_pages": ALL_MODULES,
     "status": "Active"
 }
 
