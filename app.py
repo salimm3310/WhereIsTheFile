@@ -1043,28 +1043,120 @@ else:
                         })
 
     # ---------------------------------------------------------
-    # التبويب 6: تقارير التقييم
+    # التبويب 6: تقييم الأداء المطور والتفاعلي بالكامل
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
-        st.subheader("📊 تقارير تقييم الأداء والمكافآت والتأخيرات")
+        st.subheader("تقييم الاداء")
+
+        # حفظ نسخة احتياطية لإعادة الضبط إذا لم تكن موجودة
+        if 'initial_user_points' not in st.session_state:
+            st.session_state['initial_user_points'] = {
+                1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة"},
+                2: {"earned": 1, "deducted": 1, "notes": "إغلاق ملف وتأخير سابقتين"},
+                3: {"earned": 0, "deducted": 0, "notes": ""}
+            }
 
         st.success("✅ قاعدة التقييم المعتمدة بالنظام: 1 نقطة لكل ملف مكتمل ومغلق (Closed).")
+
+        # --- لوحة التحكم لتشكيل وشكل التقرير ---
+        st.markdown("#### 🎛️ لوحة التحكم لتشكيل وفلترة تقارير الأداء")
+        c_f1, c_f2, c_f3 = st.columns(3)
+
+        active_users_eval = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+        emp_names_list = ["الكل"] + [u['full_name'] for u in active_users_eval]
+
+        with c_f1:
+            filter_emp = st.selectbox("👤 تحديد الموظف:", emp_names_list)
+        with c_f2:
+            filter_rank = st.selectbox("🏆 ترتيب الأداء والتقييم:", ["الكل (افتراضي)", "الأعلى تقييماً (Top Performers)", "الأقل تقييماً (Lowest Performers)"])
+        with c_f3:
+            card_style = st.selectbox("🎨 شكل وطابع كارت الموظف:", ["الكلاسيكي الأزرق", "الحديث الأنيق", "الداكن المتباين"])
+
+        # استخراج وتجهيز البيانات
+        raw_eval_list = []
+        for u in active_users_eval:
+            pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
+            net = pts['earned'] - pts['deducted']
+            
+            # جلب الشركات التي عمل عليها الموظف من سلة الشحنات
+            emp_shipments = [s for s in st.session_state['active_shipments'] if s.get('last_status_updater') == u['full_name']]
+            emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s]))
+            emp_comp_str = "، ".join(emp_companies) if emp_companies else "لا توجد شحنات مسجلة بعد"
+
+            raw_eval_list.append({
+                "user_id": u['user_id'],
+                "الموظف": u['full_name'],
+                "المجموعة": u['role_group'],
+                "النقاط المكتسبة": pts['earned'],
+                "الخصومات والتأخير": pts['deducted'],
+                "صافي التقييم": net,
+                "الشركات القائم عليها": emp_comp_str,
+                "ملاحظات التقييم": pts['notes']
+            })
+
+        df_eval = pd.DataFrame(raw_eval_list)
+
+        # تطبيق الفلاتر
+        if filter_emp != "الكل":
+            df_eval = df_eval[df_eval["الموظف"] == filter_emp]
+
+        if filter_rank == "الأعلى تقييماً (Top Performers)":
+            df_eval = df_eval.sort_values(by="صافي التقييم", ascending=False)
+        elif filter_rank == "الأقل تقييماً (Lowest Performers)":
+            df_eval = df_eval.sort_values(by="صافي التقييم", ascending=True)
+
+        # إضافة عمود المسلسل # وحذف العمود الأول الضمني
+        df_eval.reset_index(drop=True, inplace=True)
+        df_eval.index = df_eval.index + 1
+        df_eval.index.name = "#"
         
-        eval_rows = []
-        for u in st.session_state['registered_users']:
-            if u['status'] == "Active":
-                pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
-                net = pts['earned'] - pts['deducted']
-                eval_rows.append({
-                    "المستخدم": u['full_name'],
-                    "المجموعة": u['role_group'],
-                    "النقاط المكتسبة (+1 عند غلق الملف)": pts['earned'],
-                    "الخصومات والتأخير (-1)": pts['deducted'],
-                    "صافي التقييم النهائي": net,
-                    "ملاحظات التقييم": pts['notes']
-                })
+        # عرض الجدول المعدل
+        st.markdown("#### 📋 جدول التقييم العام للموظفين")
+        display_df = df_eval.drop(columns=["user_id"])
+        st.dataframe(display_df, use_container_width=True)
+
+        # --- تصدير التقارير Excel و PDF ---
+        col_ex1, col_ex2, col_ex3 = st.columns([2, 2, 2])
+        with col_ex1:
+            csv_data = display_df.to_csv(index=True).encode('utf-8-sig')
+            st.download_button("📥 تصدير التقرير (Excel / CSV)", data=csv_data, file_name="Performance_Report.csv", mime="text/csv", use_container_width=True)
         
-        st.dataframe(pd.DataFrame(eval_rows), use_container_width=True)
+        with col_ex2:
+            if st.button("🔄 إعادة التقييمات للوضع السابق", use_container_width=True):
+                st.session_state['user_points'] = {k: v.copy() for k, v in st.session_state['initial_user_points'].items()}
+                st.success("✅ تم إعادة التقييمات والنقاط إلى الوضع السابق بنجاح!")
+                st.rerun()
+
+        st.write("---")
+
+        # --- الكارت التعريفي المخصص للموظف ---
+        st.markdown("### 💳 الكارت التعريفي الشامل للموظف")
+        selected_card_emp = st.selectbox("اختر الموظف لعرض كارت أنائه والشركات التي عمل عليها:", [u['full_name'] for u in active_users_eval])
+        card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
+
+        if card_user_data:
+            # تخصيص ألوان الكارت حسب الاختيار
+            bg_color = "#f8fafc"
+            border_color = "#2563eb"
+            if card_style == "الحديث الأنيق":
+                bg_color = "#f0fdf4"
+                border_color = "#16a34a"
+            elif card_style == "الداكن المتباين":
+                bg_color = "#1e293b"
+                border_color = "#38bdf8"
+
+            text_color = "#020617" if card_style != "الداكن المتباين" else "#ffffff"
+
+            st.markdown(f"""
+            <div style="background-color: {bg_color}; border-right: 8px solid {border_color}; padding: 20px; border-radius: 12px; color: {text_color}; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3 style="margin-0; color: {border_color};">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
+                <hr style="border-color: {border_color};">
+                <p><strong>🏢 الشركات والعملاء المسندة إليه:</strong> {card_user_data['الشركات القائم عليها']}</p>
+                <p><strong>➕ النقاط المكتسبة (+1 عند غلق الملف):</strong> {card_user_data['النقاط المكتسبة']} | <strong>➖ الخصومات:</strong> {card_user_data['الخصومات والتأخير']}</p>
+                <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:{border_color};">{card_user_data['صافي التقييم']} نقطة</span></p>
+                <p><strong>📝 ملاحظات التقييم الميداني:</strong> {card_user_data['ملاحظات التقييم']}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
     # ---------------------------------------------------------
     # التبويب 7: سجل الحالات
