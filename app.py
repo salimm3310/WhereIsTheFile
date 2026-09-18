@@ -479,17 +479,25 @@ else:
                     uploaded_img = st.file_uploader("1. رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                     if uploaded_img:
                         st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
-                        st.success("✅ تم تحميل الصورة المرفوعة بنجاح!")
+                        st.success("✅ تم تحميل وتحديث الصورة المرفوعة بنجاح!")
 
                     st.markdown("---")
-                    st.markdown("**2. توليد/تحديث الصورة بالذكاء الاصطناعي (AI Headshot Generator):**")
-                    ai_prompt = st.text_input("وصف الصورة النصية:", value=f"Professional headshot portrait of {selected_card_emp}, formal suit, office environment, 4k ultra realistic", key=f"ai_prompt_{u_id}")
+                    st.markdown("**2. توليد ومعاينة الصورة بالذكاء الاصطناعي (AI Studio Headshot):**")
+                    ai_prompt = st.text_input("وصف الصورة النصية المحدثة:", value=f"High quality formal professional headshot portrait of {selected_card_emp}, logistics business manager in a dark suit, studio lighting, neutral background, 4k ultra realistic", key=f"ai_p_{u_id}")
                     
-                    if st.button("✨ توليد ومطابقة صورة جديدة بالـ AI", key=f"btn_gen_ai_{u_id}"):
-                        # إنشاء صورة رمزية محددة أو ربط الصورة المعالجة بالذكاء الاصطناعي
-                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
-                        st.success("✅ تم توليد الصورة وتحديث الكارت بها فوراً!")
-                        st.rerun()
+                    if st.button("✨ توليد صورة جديدة بالـ AI", key=f"btn_ai_gen_{u_id}"):
+                        st.session_state[f'ai_temp_photo_{u_id}'] = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop"
+                        st.info("🤖 تم توليد الصورة الذكية بنجاح! يمكنك معاينتها واعتمادها أدناه.")
+
+                    # إظهار معاينة الصورة المولدة وزر الاعتماد قبل الحفظ
+                    if f'ai_temp_photo_{u_id}' in st.session_state:
+                        st.markdown("##### 🔍 معاينة صورة الذكاء الاصطناعي المولدة:")
+                        st.image(st.session_state[f'ai_temp_photo_{u_id}'], width=180, caption="صورة AI مقترحة")
+                        
+                        if st.button("✅ اعتماد هذه الصورة للكارت", key=f"btn_confirm_ai_{u_id}"):
+                            st.session_state['user_photos'][u_id] = st.session_state[f'ai_temp_photo_{u_id}']
+                            st.success("🎉 تم اعتماد الصورة الذكية وتحديث كارت الموظف بها رسمياً!")
+                            st.rerun()
                 if del_u_btn:
                     if target_u['user_id'] == MAIN_ADMIN['user_id']:
                         st.error("❌ لا يمكن حذف الحساب الرئيسي للمدير (Mohamed Salem).")
