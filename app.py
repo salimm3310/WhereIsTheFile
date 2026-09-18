@@ -1043,7 +1043,7 @@ else:
                         })
 
 # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور بـ المعاينة، تصدير PDF، والصور الذكية AI
+    # التبويب 6: تقييم الأداء المطور والبطاقة الاحترافية
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1161,7 +1161,7 @@ else:
             if f'show_preview_{u_id}' not in st.session_state:
                 st.session_state[f'show_preview_{u_id}'] = False
 
-            # لوحة تعديل النقاط والملاحظات والصورة بالـ AI والرفع المباشر
+            # لوحة تعديل النقاط والملاحظات والصورة
             with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
@@ -1170,18 +1170,10 @@ else:
                     edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
                 with col_e2:
-                    st.markdown("**🖼️ صورة الموظف (رفع مباشرة أو بالـ AI):**")
-                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    st.markdown("**🖼️ صورة الموظف:**")
+                    uploaded_img = st.file_uploader("رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                     if uploaded_img:
                         st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
-
-                    st.markdown("---")
-                    st.markdown("**2. مولد الصور الشخصية بالذكاء الاصطناعي (AI Headshot Generator 4K):**")
-                    ai_prompt = st.text_input("وصف الصورة النصية المحدثة:", value=f"High quality formal professional headshot portrait of {selected_card_emp}, logistics business manager, neutral office background, 4k ultra realistic", key=f"ai_p_{u_id}")
-                    
-                    if st.button("✨ توليد وتوليد صورة عالية الجودة بالـ AI", key=f"btn_ai_{u_id}"):
-                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
-                        st.success("✅ تم توليد وتحديث الصورة الاحترافية بالذكاء الاصطناعي!")
 
                 col_btn_p1, col_btn_p2 = st.columns(2)
                 with col_btn_p1:
@@ -1204,12 +1196,12 @@ else:
 
             # تصدير الكارت إلى ملف PDF صفحة واحدة
             pdf_html_content = f"""
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #8c6d58; border-radius: 10px;">
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #8c6d58; border-radius: 10px; background-color: #fdfbf7;">
                 <h1 style="color:#4e342e; text-align:center;">Mohamed Salem OPS App - Official ID Card</h1>
-                <hr>
+                <hr style="border-color: #8c6d58;">
                 <h2>📇 الموظف: {card_user_data['الموظف']} (ID: #{u_id})</h2>
                 <p><strong>المجموعة:</strong> {card_user_data['المجموعة']}</p>
-                <p><strong>صافي التقييم:</strong> {card_user_data['صافي التقييم']} نقطة ({card_user_data['التصنيف']} - {card_user_data['النسبة المئوية']})</p>
+                <p><strong>صافي التقييم الفعلي:</strong> {card_user_data['صافي التقييم']} نقطة ({card_user_data['التصنيف']} - {card_user_data['النسبة المئوية']})</p>
                 <p><strong>ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
                 <p><strong>عدد الشركات المسندة:</strong> {card_user_data['عدد الشركات (ثابت)']} شركة</p>
             </div>
@@ -1230,10 +1222,8 @@ else:
             col_c1, col_c2 = st.columns([1, 2])
             with col_c1:
                 photo_data = st.session_state['user_photos'].get(u_id)
-                if photo_data and photo_data != "AI_GENERATED":
+                if photo_data:
                     st.image(photo_data, width=200, caption=card_user_data['الموظف'])
-                elif photo_data == "AI_GENERATED":
-                    st.markdown("<div style='width:200px; height:200px; background: linear-gradient(135deg, #4e342e, #8c6d58); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; font-size:20px; font-weight:bold; border:3px solid #8c6d58;'><span style='font-size:50px;'>🤖</span>AI Generated 4K</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='width:200px; height:200px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:16px; font-size:70px;'>👤</div>", unsafe_allow_html=True)
 
