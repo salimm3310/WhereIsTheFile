@@ -1043,7 +1043,7 @@ else:
                         })
 
     # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور والتفاعلي بالكامل (النسخة النهائية)
+    # التبويب 6: تقييم الأداء المطور بـ كارت الوجهين والصور الذكية AI
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1055,11 +1055,14 @@ else:
                 3: {"earned": 0, "deducted": 0, "notes": ""}
             }
 
+        if 'user_photos' not in st.session_state:
+            st.session_state['user_photos'] = {}
+
         st.success("✅ قاعدة التقييم المعتمدة بالنظام: 1 نقطة لكل ملف مكتمل ومغلق (Closed).")
 
         # --- لوحة التحكم لتشكيل وفلترة التقرير ---
         st.markdown("#### 🎛️ لوحة التحكم لتشكيل وفلترة تقارير الأداء")
-        c_f1, c_f2, c_f3 = st.columns(3)
+        c_f1, c_f2 = st.columns(2)
 
         active_users_eval = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
         emp_names_list = ["الكل"] + [u['full_name'] for u in active_users_eval]
@@ -1068,8 +1071,6 @@ else:
             filter_emp = st.selectbox("👤 تحديد الموظف:", emp_names_list)
         with c_f2:
             filter_rank = st.selectbox("🏆 ترتيب الأداء والتقييم:", ["الكل (افتراضي)", "الأعلى تقييماً (Top Performers)", "الأقل تقييماً (Lowest Performers)"])
-        with c_f3:
-            card_style = st.selectbox("🎨 شكل وطابع كارت الموظف:", ["المودرن الحديث (Brown & White ID Card)", "الكلاسيكي الأزرق", "الداكن المتباين"])
 
         # استخراج وتجهيز البيانات
         raw_eval_list = []
@@ -1119,28 +1120,22 @@ else:
 
         df_eval = pd.DataFrame(raw_eval_list)
 
-        # 1. تصفية الموظف
         if filter_emp != "الكل":
             df_eval = df_eval[df_eval["الموظف"] == filter_emp]
 
-        # 2. تفعيل ترتيب الأداء الفعلي بفرز الصفوف
         if filter_rank == "الأعلى تقييماً (Top Performers)":
             df_eval = df_eval.sort_values(by="صافي التقييم", ascending=False)
         elif filter_rank == "الأقل تقييماً (Lowest Performers)":
             df_eval = df_eval.sort_values(by="صافي التقييم", ascending=True)
 
-        # إعادة ترقيم المسلسل #
         df_eval.reset_index(drop=True, inplace=True)
         df_eval.index = df_eval.index + 1
         df_eval.index.name = "#"
 
         st.markdown("#### 📋 جدول التقييم العام للموظفين")
         display_df = df_eval.drop(columns=["user_id", "قائمة الشركات"])
-        
-        # عرض ثابت آمن وغير قابل للتعديل المباشر لحماية العمليات الحسابية
         st.dataframe(display_df, use_container_width=True)
 
-        # أزرار التصدير وإعادة الضبط
         col_ex1, col_ex2 = st.columns([2, 2])
         with col_ex1:
             csv_data = display_df.to_csv(index=True).encode('utf-8-sig')
@@ -1154,75 +1149,78 @@ else:
 
         st.write("---")
 
-        # --- قسم تعديل نقاط وملاحظات المدير وإصدار الكارت التعريفي ---
-        st.markdown("### 💳 الكارت التعريفي المخصص وإدارة التقييمات")
+        # --- قسم الكارت التعريفي المزدوج الوجهين ---
+        st.markdown("### 💳 كارت الموظف المزدوج (Canva Modern Business ID Card)")
         selected_card_emp = st.selectbox("اختر الموظف", [u['full_name'] for u in active_users_eval])
         card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
 
         if card_user_data:
-            with st.expander(f"✏️ تعديل نقاط وملاحظات المدير لـ ({selected_card_emp})"):
+            u_id = card_user_data['user_id']
+            
+            # لوحة تعديل النقاط والصورة بالذكاء الاصطناعي/الرفع المباشر
+            with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
-                    edit_earned = st.number_input("تعديل النقاط المكتسبة:", min_value=0, value=card_user_data['النقاط المكتسبة'], key=f"e_ear_{card_user_data['user_id']}")
-                    edit_deducted = st.number_input("تعديل الخصومات والتأخيرات:", min_value=0, value=card_user_data['الخصومات والتأخير'], key=f"e_ded_{card_user_data['user_id']}")
-                with col_e2:
-                    edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=100, key=f"e_not_{card_user_data['user_id']}")
+                    edit_earned = st.number_input("تعديل النقاط المكتسبة:", min_value=0, value=card_user_data['النقاط المكتسبة'], key=f"e_ear_{u_id}")
+                    edit_deducted = st.number_input("تعديل الخصومات والتأخيرات:", min_value=0, value=card_user_data['الخصومات والتأخير'], key=f"e_ded_{u_id}")
+                    edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
-                if st.button("💾 حفظ اعتماد تعديل التقييم والمدير", key=f"btn_save_eval_{card_user_data['user_id']}"):
-                    st.session_state['user_points'][card_user_data['user_id']] = {
+                with col_e2:
+                    st.markdown("**🖼️ صورة الموظف (رفع مباشرة أو بالـ AI):**")
+                    uploaded_img = st.file_uploader("رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    if uploaded_img:
+                        st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
+
+                if st.button("💾 حفظ اعتماد التعديلات والصورة", key=f"btn_save_eval_{u_id}"):
+                    st.session_state['user_points'][u_id] = {
                         "earned": edit_earned,
                         "deducted": edit_deducted,
                         "notes": edit_admin_notes.strip()
                     }
-                    st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
+                    st.success("✅ تم حفظ وتحديث الكارت والبيانات بنجاح!")
                     st.rerun()
 
-            # --- الكارت التعريفي بتصميم Canva الحديث (Brown & White Modern ID Card) ---
-            if card_style == "المودرن الحديث (Brown & White ID Card)":
-                st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #fdfbf7 0%, #d7c4b7 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 25px; color: #3e2723; box-shadow: 0 8px 16px rgba(0,0,0,0.15);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8c6d58; padding-bottom: 12px; margin-bottom: 15px;">
-                        <div>
-                            <h2 style="margin:0; color: #4e342e; font-size: 28px !important;">📇 {card_user_data['الموظف']}</h2>
-                            <p style="margin:0; color: #6d4c41; font-size: 20px !important;">المجموعة: <strong>{card_user_data['المجموعة']}</strong></p>
-                        </div>
-                        <div style="background-color: #4e342e; color: #ffffff; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 18px !important;">
-                            ID: #{card_user_data['user_id']}
-                        </div>
-                    </div>
-                    <div style="background-color: rgba(255, 255, 255, 0.7); border-radius: 10px; padding: 15px; margin-bottom: 15px;">
-                        <p style="margin: 5px 0;"><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size: 28px !important; color: #4e342e; font-weight: bold;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <span style="background-color:#8c6d58; color:white; padding: 2px 8px; border-radius: 6px;">"{card_user_data['التصنيف']}"</span> - بنسبة {card_user_data['النسبة المئوية']})</p>
-                        <p style="margin: 5px 0;"><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            # عرض الكارت ذو الوجهين
+            tab_card_front, tab_card_back = st.tabs(["📇 الوجه الأول (البيانات الشخصية والصورة)", "📊 الوجه الثاني (التقييم والشركات)"])
 
-            elif card_style == "الحديث الأنيق":
+            with tab_card_front:
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_c1, col_c2 = st.columns([1, 2])
+                with col_c1:
+                    if u_id in st.session_state['user_photos']:
+                        st.image(st.session_state['user_photos'][u_id], width=180, caption=card_user_data['الموظف'])
+                    else:
+                        st.markdown("<div style='width:180px; height:180px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:12px; font-size:60px;'>👤</div>", unsafe_allow_html=True)
+
+                with col_c2:
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #fdfbf7 0%, #d7c4b7 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">
+                            <h2 style="margin:0; color: #4e342e;">📇 {card_user_data['الموظف']}</h2>
+                            <span style="background-color: #4e342e; color: white; padding: 4px 12px; border-radius: 12px; font-weight:bold;">ID: #{u_id}</span>
+                        </div>
+                        <p style="margin-top:12px; font-size:22px !important;">المجموعة الصلاحية: <strong>{card_user_data['المجموعة']}</strong></p>
+                        <p style="font-size:20px !important;">التخصص: <strong>عمليات الشحن واللوجستيات (OPS Freight)</strong></p>
+                        <p style="font-size:20px !important; color:#8c6d58;"><strong>Mohamed Salem OPS App Official ID</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            with tab_card_back:
+                st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown(f"""
-                <div style="background-color: #f0fdf4; border-right: 8px solid #16a34a; padding: 20px; border-radius: 12px; color: #020617; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0; color: #16a34a;">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
-                    <hr style="border-color: #16a34a;">
-                    <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:#16a34a;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <strong>"{card_user_data['التصنيف']}"</strong> - بنسبة {card_user_data['النسبة المئوية']})</p>
+                <div style="background: linear-gradient(135deg, #ffffff 0%, #f1e8e1 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
+                    <h3 style="margin:0; color: #4e342e; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">📊 ملخص تقييم أداء الموظف</h3>
+                    <p style="margin-top:12px;"><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size: 28px !important; color: #4e342e; font-weight: bold;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <span style="background-color:#8c6d58; color:white; padding: 2px 8px; border-radius: 6px;">"{card_user_data['التصنيف']}"</span> - بنسبة {card_user_data['النسبة المئوية']})</p>
                     <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
-            else:
-                st.markdown(f"""
-                <div style="background-color: #1e293b; border-right: 8px solid #38bdf8; padding: 20px; border-radius: 12px; color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0; color: #38bdf8;">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
-                    <hr style="border-color: #38bdf8;">
-                    <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:#38bdf8;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <strong>"{card_user_data['التصنيف']}"</strong> - بنسبة {card_user_data['النسبة المئوية']})</p>
-                    <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown(f"#### 🏢 الشركات والعملاء المسندة للموظف (العدد الكلي الثابت: {card_user_data['عدد الشركات (ثابت)']} شركة / عميل):")
-            if card_user_data['قائمة الشركات']:
-                df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
-                st.dataframe(df_comp, use_container_width=True)
-            else:
-                st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
+                st.markdown(f"#### 🏢 الشركات والعملاء القائم عليها الموظف (العدد الإجمالي الثابت: {card_user_data['عدد الشركات (ثابت)']} شركة):")
+                if card_user_data['قائمة الشركات']:
+                    df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
+                    st.dataframe(df_comp, use_container_width=True)
+                else:
+                    st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
     # ---------------------------------------------------------
     # التبويب 7: سجل الحالات
     # ---------------------------------------------------------
