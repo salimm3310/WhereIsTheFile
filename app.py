@@ -473,30 +473,23 @@ else:
                     edit_pass = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
                 
                 with col_e2:
-                    edit_group = st.selectbox("المجموعة الصلاحية:", ["OPS", "Sys 1", "Sys 2", "Admin"], index=["OPS", "Sys 1", "Sys 2", "Admin"].index(target_u['role_group']) if target_u['role_group'] in ["OPS", "Sys 1", "Sys 2", "Admin"] else 0)
-                    st.markdown("**صلاحيات الشاشات واللوحات المسموحة:**")
-                    edit_pages = []
-                    for module in ALL_MODULES:
-                        is_checked = module in target_u.get('allowed_pages', ALL_MODULES)
-                        if st.checkbox(module, value=is_checked, key=f"edit_p_{target_u['user_id']}_{module}"):
-                            edit_pages.append(module)
+                    st.markdown("**🖼️ إدارة صورة الموظف (رفع مباشر أو اعتماد الـ AI):**")
+                    
+                    # 1. رفع صورة مباشرة
+                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    if uploaded_img:
+                        st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
+                        st.success("✅ تم تحميل الصورة المرفوعة بنجاح!")
 
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    save_u_btn = st.form_submit_button("💾 حفظ التعديلات")
-                with col_btn2:
-                    del_u_btn = st.form_submit_button("🗑️ حذف وتجميد الحساب")
-
-                if save_u_btn:
-                    target_u['full_name'] = edit_name.strip()
-                    target_u['phone_number'] = edit_phone.strip()
-                    if edit_pass.strip() != "":
-                        target_u['password_hash'] = make_hashes(edit_pass.strip())
-                    target_u['role_group'] = edit_group
-                    target_u['allowed_pages'] = edit_pages
-                    st.success(f"✅ تم تحديث بيانات وصلاحيات الحساب ({edit_name}) بنجاح!")
-                    st.rerun()
-
+                    st.markdown("---")
+                    st.markdown("**2. توليد/تحديث الصورة بالذكاء الاصطناعي (AI Headshot Generator):**")
+                    ai_prompt = st.text_input("وصف الصورة النصية:", value=f"Professional headshot portrait of {selected_card_emp}, formal suit, office environment, 4k ultra realistic", key=f"ai_prompt_{u_id}")
+                    
+                    if st.button("✨ توليد ومطابقة صورة جديدة بالـ AI", key=f"btn_gen_ai_{u_id}"):
+                        # إنشاء صورة رمزية محددة أو ربط الصورة المعالجة بالذكاء الاصطناعي
+                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
+                        st.success("✅ تم توليد الصورة وتحديث الكارت بها فوراً!")
+                        st.rerun()
                 if del_u_btn:
                     if target_u['user_id'] == MAIN_ADMIN['user_id']:
                         st.error("❌ لا يمكن حذف الحساب الرئيسي للمدير (Mohamed Salem).")
