@@ -9,7 +9,7 @@ import plotly.express as px
 from db_connection import execute_query
 
 # =========================================================
-# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والخطوط والشفافية
+# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والتباين
 # =========================================================
 st.set_page_config(
     page_title="فين الملف؟ - Mohamed Salem OPS App",
@@ -28,58 +28,67 @@ def get_base64_of_bin_file(bin_file):
 
 bg_base64 = get_base64_of_bin_file("background.jpg")
 
-# تطبيق زيادة شفافية الخلفية إلى 40% وتكبير الخطوط وتثقيلها (18px للعناوين، 14px للبيانات)
+# تطبيق التباين العالي: خلفيات بيضاء مريحة للبيانات + خطوط 26px للعناوين و 24px للبيانات
 st.markdown(f"""
 <style>
     .stApp {{
-        background-image: linear-gradient(rgba(248, 250, 252, 0.40), rgba(248, 250, 252, 0.40)), url("data:image/jpg;base64,{bg_base64}");
+        background-image: linear-gradient(rgba(241, 245, 249, 0.75), rgba(241, 245, 249, 0.75)), url("data:image/jpg;base64,{bg_base64}");
         background-attachment: fixed;
         background-size: cover;
         background-position: center;
-        color: #0f172a;
-        font-size: 14px !important;
-        font-weight: 700 !important;
+        color: #020617;
+        font-size: 24px !important;
+        font-weight: 800 !important;
     }}
     
-    /* عناوين البرنامج رئيسية وفرعية - 18px وثقيل جداً */
+    /* عناوين البرنامج الرئيسية والفرعية - 26px وثقيلة جداً */
     h1, h2, h3, .main-header {{
-        font-size: 18px !important;
+        font-size: 26px !important;
         font-weight: 800 !important;
         color: #0f172a !important;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        text-shadow: 0 1px 2px rgba(255,255,255,0.8);
     }}
     
     .sub-header {{
         text-align: center;
         color: #1e293b !important;
-        font-size: 16px !important;
+        font-size: 24px !important;
         font-weight: 800 !important;
         margin-bottom: 25px;
     }}
 
-    /* نصوص البيانات والجداول والحقول والقوائم المنسدلة والبطاقات - 14px وثقيل */
+    /* نصوص البيانات والجداول والحقول والقوائم المنسدلة والبطاقات - 24px وثقيل للوضوح */
     p, label, span, div, input, select, textarea, button, .stDataFrame, .stSelectbox, .stTextInput {{
-        font-size: 14px !important;
-        font-weight: 700 !important;
+        font-size: 24px !important;
+        font-weight: 800 !important;
         color: #020617 !important;
     }}
 
-    /* تحسين تباين الخانات والجداول */
-    .stDataFrame {{
-        background-color: rgba(255, 255, 255, 0.92) !important;
-        border-radius: 8px;
-        padding: 5px;
+    /* تحسين التباين بخلفية بيضاء ناصعة للجداول والحقول والبطاقات */
+    .stDataFrame, .stForm, div[data-testid="stExpander"], div[data-testid="stMetricValue"] {{
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }}
+
+    input, select, textarea {{
+        background-color: #ffffff !important;
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 8px !important;
     }}
 
     .stButton>button {{
         width: 100%;
         background-color: #2563eb !important;
         color: white !important;
-        border-radius: 6px;
+        border-radius: 8px;
         font-weight: 800 !important;
-        font-size: 14px !important;
-        padding: 10px;
+        font-size: 24px !important;
+        padding: 12px;
         border: none;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
     }}
     .stButton>button:hover {{
         background-color: #1d4ed8 !important;
@@ -89,36 +98,36 @@ st.markdown(f"""
     .status-badge-ontime {{
         background-color: #dcfce7;
         color: #166534;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-weight: 800;
-        font-size: 14px;
+        font-size: 24px;
     }}
     .status-badge-alert {{
         background-color: #fef9c3;
         color: #854d0e;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-weight: 800;
-        font-size: 14px;
+        font-size: 24px;
     }}
     .status-badge-late {{
         background-color: #fee2e2;
         color: #991b1b;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-weight: 800;
-        font-size: 14px;
+        font-size: 24px;
     }}
     .chat-bubble-in {{
-        background-color: rgba(255, 255, 255, 0.95);
-        border-right: 4px solid #2563eb;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 10px;
+        background-color: rgba(255, 255, 255, 0.98);
+        border-right: 6px solid #2563eb;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 12px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        font-size: 14px !important;
-        font-weight: 700 !important;
+        font-size: 24px !important;
+        font-weight: 800 !important;
     }}
 </style>
 """, unsafe_allow_html=True)
