@@ -727,7 +727,7 @@ else:
             st.dataframe(filtered_df, use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 3: إدارة الحالات والتتبع المحدثة والمعدلة
+    # التبويب 3: إدارة الحالات والتتبع
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
@@ -832,12 +832,12 @@ else:
                         st.warning("يرجى كتابة نص الملاحظة قبل الحفظ.")
 
     # ---------------------------------------------------------
-    # التبويب 4: تفكيك الـ 11
+    # التبويب 4: اضف الشحنة (المحدث والمنقح بالكامل)
     # ---------------------------------------------------------
     elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
-        st.subheader("📋 تفكيك السطر المرجعي وإدخال الشحنة (11 حقل)")
+        st.subheader("اضف الشحنة")
         
-        input_type = st.radio("اختر طريقة الإدخال:", ["تفكيك سطر مرجعي (Smart Parse)", "إدخال يدوي مباشر"], horizontal=True)
+        input_type = st.radio("اختر طريقة الإدخال:", ["اضف العنوان", "إدخال يدوي مباشر"], horizontal=True)
 
         parsed = {
             'po_number': '', 'file_number': '', 'container_count': 1,
@@ -846,22 +846,21 @@ else:
             'company_name': '', 'booking_number': '', 'item_description': ''
         }
 
-        if input_type == "تفكيك سطر مرجعي (Smart Parse)":
-            raw_ref_str = st.text_area("ألصق السطر المرجعي هنا (11 حقل):", height=80, 
-                                       placeholder="C - 260862115 - 4.0 x 40 RFH - PSD - LATTAKIA - Syria - INV 3A - 3B - U.S.C لحد دلوقتى - CFA0951367")
+        if input_type == "اضف العنوان":
+            raw_ref_str = st.text_area("ألصق العنوان", height=80, value="")
             
             if st.button("🔍 تفكيك البيانات وتعبئة الحقول"):
                 if raw_ref_str.strip() != "":
                     data, success = parse_reference_string(raw_ref_str)
                     if success:
                         st.session_state['parsed_data'] = data
-                        st.success("✅ تم تفكيك السطر وتعبئة الحقول بنجاح!")
+                        st.success("✅ تم تفكيك العنوان وتعبئة الحقول بنجاح!")
                     else:
-                        st.error("⚠️ لم نتمكن من تفكيك السطر بالكامل.")
+                        st.error("⚠️ لم نتمكن من تفكيك النص بالكامل.")
                 else:
-                    st.warning("يرجى إلصاق النص أولاً.")
+                    st.warning("يرجى إلصاق العنوان أولاً.")
 
-        if 'parsed_data' in st.session_state and input_type == "تفكيك سطر مرجعي (Smart Parse)":
+        if 'parsed_data' in st.session_state and input_type == "اضف العنوان":
             parsed = st.session_state['parsed_data']
 
         st.write("---")
@@ -876,15 +875,15 @@ else:
             with c2:
                 pol_val = st.text_input("ميناء الشحن (POL)", value=parsed['pol'])
                 pod_val = st.text_input("ميناء الوصول (POD)", value=parsed['pod'])
-                dest_country = st.text_input("دولة المقصد", value=parsed['destination_country'])
-                inv_num = st.text_input("رقم الفاتورة (بدون INV)", value=parsed['invoice_number'])
+                dest_country = st.text_input("الوجهة النهائية", value=parsed['destination_country'])
+                inv_num = st.text_input("رقم الفاتورة", value=parsed['invoice_number'])
 
             with c3:
                 company = st.text_input("اسم الشركة (Company Name) *", value=parsed['company_name'])
                 bkg_num = st.text_input("رقم الحجز (Booking Number)", value=parsed['booking_number'])
                 item_desc = st.text_area("وصف البضاعة", value=parsed['item_description'], height=100)
 
-            submit_btn = st.form_submit_button("💾 حفظ الشحنة")
+            submit_btn = st.form_submit_button("اضف الشحنة")
 
             if submit_btn:
                 if file_num.strip() == "" or company.strip() == "":
@@ -904,7 +903,7 @@ else:
                         "note": ""
                     }
                     st.session_state['active_shipments'].append(new_item)
-                    st.success(f"🎉 تم حفظ الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
+                    st.success(f"🎉 تم إضافة الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
     # التبويب 5: المراسلات والواتساب
