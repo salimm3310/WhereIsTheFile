@@ -9,7 +9,7 @@ import plotly.express as px
 from db_connection import execute_query
 
 # =========================================================
-# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والتباين المحدث
+# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والتباين
 # =========================================================
 st.set_page_config(
     page_title="فين الملف؟ - Mohamed Salem OPS App",
@@ -27,7 +27,6 @@ def get_base64_of_bin_file(bin_file):
 
 bg_base64 = get_base64_of_bin_file("background.jpg")
 
-# الشفافية المحدثة بنسبة 80% مع خطوط 26px للعناوين و 24px للبيانات
 st.markdown(f"""
 <style>
     .stApp {{
@@ -145,7 +144,7 @@ def format_whatsapp_phone(raw_phone, default_country_code="20"):
         clean_phone = default_country_code + clean_phone[1:]
     return clean_phone
 
-# قائمة كافة الشاشات الأساسية
+# قائمة شاشات البرنامج
 ALL_MODULES = [
     "⚙️ لوحة التحكم الإدارية (Admin Panel)",
     "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)",
@@ -187,10 +186,11 @@ if 'user_info' not in st.session_state:
 
 if 'active_shipments' not in st.session_state:
     st.session_state['active_shipments'] = [
-        {"id": 1, "file_num": "260862115", "company": "U.S.C", "bkg": "CFA0951367", "inv": "3A - 3B", "status": "Under Operation", "holded": 0, "h_reason": "", "last_up": "2026-09-18 10:00:00", "creator": "Mohamed Salem"},
-        {"id": 2, "file_num": "260862116", "company": "CFA Global", "bkg": "CFA0951368", "inv": "104B", "status": "Waiting BL", "holded": 0, "h_reason": "", "last_up": "2026-09-18 11:30:00", "creator": "أحمد علي"},
-        {"id": 3, "file_num": "260862117", "company": "Al-Salem Trading", "bkg": "CFA0951369", "inv": "88C", "status": "Ready to be invoiced", "holded": 0, "h_reason": "", "last_up": "2026-09-18 12:15:00", "creator": "Mohamed Salem"},
-        {"id": 4, "file_num": "260862118", "company": "U.S.C", "bkg": "CFA0951370", "inv": "99A", "status": "Draft", "holded": 1, "h_reason": "في انتظار موافقة العميل", "last_up": "2026-09-18 09:00:00", "creator": "محمود حسن"}
+        {"id": 1, "file_num": "260862115", "company": "U.S.C", "bkg": "CFA0951367", "inv": "3A - 3B", "status": "Under Operation", "holded": 0, "h_reason": "", "last_up": "2026-09-18 10:00:00", "last_status_updater": "Mohamed Salem"},
+        {"id": 2, "file_num": "260862116", "company": "CFA Global", "bkg": "CFA0951368", "inv": "104B", "status": "Waiting BL", "holded": 0, "h_reason": "", "last_up": "2026-09-10 11:30:00", "last_status_updater": "أحمد علي"},
+        {"id": 3, "file_num": "260862117", "company": "Al-Salem Trading", "bkg": "CFA0951369", "inv": "88C", "status": "Ready to be invoiced", "holded": 0, "h_reason": "", "last_up": "2026-09-18 12:15:00", "last_status_updater": "Mohamed Salem"},
+        {"id": 4, "file_num": "260862118", "company": "U.S.C", "bkg": "CFA0951370", "inv": "99A", "status": "Draft", "holded": 1, "h_reason": "في انتظار موافقة العميل", "last_up": "2026-09-12 09:00:00", "last_status_updater": "محمود حسن"},
+        {"id": 5, "file_num": "260862119", "company": "U.S.C", "bkg": "CFA0951371", "inv": "12C", "status": "Closed", "holded": 0, "h_reason": "", "last_up": "2026-09-15 14:00:00", "last_status_updater": "Mohamed Salem"}
     ]
 
 if 'internal_messages' not in st.session_state:
@@ -206,7 +206,7 @@ if 'whatsapp_logs' not in st.session_state:
     ]
 
 # =========================================================
-# 3. دالة تفكيك السطر المرجعي
+# 3. دالة تفكيك السطر المرجعي ودالة حساب المهل SLA
 # =========================================================
 def parse_reference_string(raw_text):
     parts = [p.strip() for p in raw_text.split(' - ') if p.strip() != '']
@@ -273,7 +273,7 @@ def parse_reference_string(raw_text):
     return None, False
 
 def calculate_sla_status(current_status, last_updated_at):
-    if not last_updated_at:
+    if not last_updated_at or current_status == "Closed":
         return "في الموعد (On Time)", "status-badge-ontime", 0
 
     max_check_hours = 48
@@ -396,11 +396,10 @@ else:
     if not allowed_menu:
         allowed_menu = ALL_MODULES
 
-    # اختيار الشاشة الافتراضية
     choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
     # ---------------------------------------------------------
-    # التبويب 1: لوحة التحكم الإدارية للمدير الرئيسي (Admin Panel)
+    # التبويب 1: لوحة التحكم الإدارية (Admin Panel)
     # ---------------------------------------------------------
     if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
         st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
@@ -413,7 +412,6 @@ else:
             "⏱️ إعدادات المهل SLA"
         ])
 
-        # 1.1 اعتماد الطلبات
         with tab_users_act:
             st.markdown("### 👥 طلبات الحسابات بانتظار الاعتماد وتحديد الصلاحيات")
             pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
@@ -449,7 +447,6 @@ else:
             else:
                 st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
 
-        # 1.2 تعديل الحسابات المفعلة والمجموعات وكلمات المرور والحذف
         with tab_user_edit:
             st.markdown("### 🛠️ إدارة الحسابات المفعلة (تعديل / حذف / إعادة ضبط المرور)")
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
@@ -499,7 +496,6 @@ else:
                         st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
                         st.rerun()
 
-        # 1.3 صندوق البريد وتتبع المراسلات والواتساب لكل مستخدم
         with tab_audit:
             st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
@@ -539,7 +535,6 @@ else:
                 else:
                     st.info("لا توجد مراسلات واتساب مسجلة لهذا المستخدم.")
 
-        # 1.4 قسم تقييمات الموظفين والتحكم بالنقاط المكتسبة والضائعة والتحليل العام
         with tab_points_eval:
             st.markdown("### 🏆 التحكم بنقاط تقييم الموظفين والتحليل العام للأداء")
             
@@ -583,7 +578,6 @@ else:
                 fig_eval = px.bar(df_eval_chart, x="مؤشر", y="العدد", color="مؤشر", text_auto=True, title=f"تحليل التقييم والتزام الموظف ({eval_u['full_name']})")
                 st.plotly_chart(fig_eval, use_container_width=True)
 
-        # 1.5 إعدادات SLA
         with tab_sla_cfg:
             st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
             st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
@@ -603,7 +597,7 @@ else:
                 st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
 
     # ---------------------------------------------------------
-    # التبويب 2: التحليلات الشاملة الـ 7
+    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard) المحدثة
     # ---------------------------------------------------------
     elif choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
@@ -612,82 +606,129 @@ else:
         df_shipments.rename(columns={
             "id": "shipment_id", "file_num": "file_number", "company": "company_name",
             "inv": "invoice_number", "status": "current_status", "holded": "is_holded",
-            "last_up": "last_updated_at", "creator": "full_name"
+            "last_up": "last_updated_at", "last_status_updater": "full_name"
         }, inplace=True)
 
-        col_filter1, col_filter2 = st.columns(2)
+        df_shipments['sla_status'] = df_shipments.apply(lambda row: calculate_sla_status(row["current_status"], row["last_updated_at"])[0], axis=1)
 
-        with col_filter1:
-            all_employees = ["كل الموظفين (الشامل)"] + list(df_shipments["full_name"].unique())
-            selected_emp = st.selectbox("👤 1️⃣ اختر الموظف المحدد أو كافة الموظفين:", all_employees)
+        # لوحة التحكم والبحث المتقدمة
+        st.markdown("#### 🔍 لوحة تصفية وبحث محددات التحليل")
+        col_f1, col_f2 = st.columns(2)
 
-        filtered_df = df_shipments if selected_emp == "كل الموظفين (الشامل)" else df_shipments[df_shipments["full_name"] == selected_emp]
+        with col_f1:
+            all_employees = ["كل الموظفين (الشامل)"] + sorted(list(df_shipments["full_name"].dropna().unique()))
+            selected_emp = st.selectbox("👤 اختر الموظف المحدد (صاحب آخر تحديث للحالة):", all_employees)
 
-        with col_filter2:
-            analysis_options = [
-                "📊 تقييم وأداء الموظف (1 نقطة/شحنة)",
-                "🏢 تقييم أداء العميل",
-                "🔄 عدد الشحنات بالحالات الخاصة بها",
-                "🎯 أكثر حالة مكررة للموظف",
-                "🏷️ أكثر حالة مكررة لاسم عميل محدد",
-                "⏱️ تحليل الالتزام بالمهل الزمنية (SLA Breakdown)",
-                "📂 استعلام ملفات العملاء المجمعة"
-            ]
-            selected_analysis = st.selectbox("💡 2️⃣ اختر التحليل المطلوب إظهاره:", analysis_options)
+        with col_f2:
+            all_companies = ["كل العملاء (الكل)"] + sorted(list(df_shipments["company_name"].dropna().unique()))
+            selected_comp = st.selectbox("🏢 اختر الشركة / العميل المحدد للبحث والتصفية:", all_companies)
+
+        # تطبيق التصفية المزدوجة
+        filtered_df = df_shipments.copy()
+        if selected_emp != "كل الموظفين (الشامل)":
+            filtered_df = filtered_df[filtered_df["full_name"] == selected_emp]
+        if selected_comp != "كل العملاء (الكل)":
+            filtered_df = filtered_df[filtered_df["company_name"] == selected_comp]
 
         st.write("---")
 
-        if selected_analysis == "📊 تقييم وأداء الموظف (1 نقطة/شحنة)":
-            st.markdown(f"### 📊 تقييم وأداء الموظف: **{selected_emp}**")
-            total_shipments = len(filtered_df)
-            net_points = total_shipments * 1
+        analysis_options = [
+            "📊 تقييم أداء الشحنات بالحالات والأسماء",
+            "🏢 تقييم ومتابعة أداء العملاء والتأخيرات",
+            "🔄 نسبة الشحنات بالحالات التشغيلية",
+            "🎯 أسباب وعنق التكظز (Bottleneck Analysis)",
+            "⏱️ تحليل الالتزام بالمهل الزمنية (SLA Breakdown)",
+            "📂 كشف واستعلام ملفات العملاء التفصيلي"
+        ]
+        selected_analysis = st.selectbox("💡 اختر نوع التحليل المطلوب إظهاره:", analysis_options)
 
-            k1, k2, k3, k4 = st.columns(4)
-            k1.metric("📦 إجمالي الشحنات", f"{total_shipments} شحنة")
-            k2.metric("➕ النقاط المكتسبة (+1 نقطة)", f"+{net_points} نقطة")
-            k3.metric("➖ الخصومات والتأخير", "0 نقطة")
-            k4.metric("🏆 التقييم الفعلي النهائي", f"{net_points} نقطة")
+        st.write("---")
 
-            fig_emp_status = px.bar(filtered_df["current_status"].value_counts().reset_index(), x="current_status", y="count", color="current_status", title="توزيع شحنات الموظف حسب الحالة التشغيلية", text_auto=True)
-            st.plotly_chart(fig_emp_status, use_container_width=True)
+        # 2.1 تقييم أداء الشحنات بالحالات والأسماء
+        if selected_analysis == "📊 تقييم أداء الشحنات بالحالات والأسماء":
+            st.markdown(f"### 📊 توزيع شحنات الحالات متبوعة بأسماء الموظفين المحدثين")
+            
+            if selected_emp == "كل الموظفين (الشامل)":
+                # رسم بياني مجمع يُظهر أسماء الموظفين داخل الحالات
+                status_emp_summary = filtered_df.groupby(["current_status", "full_name"]).size().reset_index(name="عدد_الشحنات")
+                fig_stacked = px.bar(
+                    status_emp_summary, 
+                    x="current_status", 
+                    y="عدد_الشحنات", 
+                    color="full_name", 
+                    title="توزيع الحالات التشغيلية مقسمة بأسماء الموظفين القائمين بالتحديث", 
+                    text_auto=True,
+                    barmode="stack"
+                )
+                st.plotly_chart(fig_stacked, use_container_width=True)
+            else:
+                fig_single = px.bar(
+                    filtered_df["current_status"].value_counts().reset_index(), 
+                    x="current_status", 
+                    y="count", 
+                    color="current_status", 
+                    title=f"توزيع شحنات الموظف ({selected_emp}) حسب الحالات", 
+                    text_auto=True
+                )
+                st.plotly_chart(fig_single, use_container_width=True)
 
-        elif selected_analysis == "🏢 تقييم أداء العميل":
-            st.markdown("### 🏢 تقييم أداء وتوزيع العملاء")
-            comp_summary = filtered_df.groupby("company_name").agg(إجمالي_الشحنات=('shipment_id', 'count'), الشحنات_المعلقة=('is_holded', 'sum')).reset_index()
-            st.dataframe(comp_summary, use_container_width=True)
-            fig_comp = px.bar(comp_summary, x="company_name", y="إجمالي_الشحنات", color="company_name", text_auto=True)
-            st.plotly_chart(fig_comp, use_container_width=True)
+        # 2.2 تقييم أداء العملاء المكتملة والمتاخرة ومتابعتها
+        elif selected_analysis == "🏢 تقييم ومتابعة أداء العملاء والتأخيرات":
+            st.markdown("### 🏢 تقييم أداء العملاء وتفاصيل التأخيرات للمتابعة الفورية")
+            
+            comp_eval = filtered_df.groupby("company_name").agg(
+                إجمالي_الشحنات=('shipment_id', 'count'),
+                المكتملة_Closed=('current_status', lambda x: (x == 'Closed').sum()),
+                المتأخرة_Late=('sla_status', lambda x: (x == 'متأخر (Late)').sum()),
+                المعلقة_Hold=('is_holded', 'sum')
+            ).reset_index()
 
-        elif selected_analysis == "🔄 عدد الشحنات بالحالات الخاصة بها":
-            st.markdown("### 🔄 إحصائيات الشحنات حسب الحالات الـ 8")
-            fig_pie_status = px.pie(filtered_df, names="current_status", hole=0.3, title="نسب توزيع الشحنات على الحالات الـ 8")
-            st.plotly_chart(fig_pie_status, use_container_width=True)
+            st.dataframe(comp_eval, use_container_width=True)
 
-        elif selected_analysis == "🎯 أكثر حالة مكررة للموظف":
-            st.markdown("### 🎯 الحالة الأكثر تكراراً (Bottleneck Analysis)")
+            # كشف تفصيلي للشحنات المتأخرة التابعة للعملاء لمباشرة المتابعة
+            late_shipments = filtered_df[filtered_df['sla_status'] == 'متأخر (Late)']
+            st.markdown("#### 🚨 كشف وصف الشحنات المتأخرة لمباشرة إجراءات المتابعة:")
+            if not late_shipments.empty:
+                st.dataframe(late_shipments[[
+                    "file_number", "company_name", "current_status", 
+                    "full_name", "last_updated_at", "h_reason"
+                ]].rename(columns={
+                    "file_number": "رقم الملف",
+                    "company_name": "الشركة / العميل",
+                    "current_status": "الحالة المتأخرة الحالية",
+                    "full_name": "الموظف المحدث للحالة",
+                    "last_updated_at": "تاريخ آخر تحديث حالة",
+                    "h_reason": "سبب التعليق إن وجد"
+                }), use_container_width=True)
+            else:
+                st.success("✅ لا توجد شحنات متأخرة حالياً لكافة العملاء المحددين.")
+
+        # 2.3 نسبة الشحنات بالحالات
+        elif selected_analysis == "🔄 نسبة الشحنات بالحالات التشغيلية":
+            st.markdown("### 🔄 نسبة توزيع الشحنات على الحالات الـ 8")
+            fig_pie = px.pie(filtered_df, names="current_status", hole=0.35, title="نسب توزيع الشحنات بالحالات التشغيلية")
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        # 2.4 عنق التكظز
+        elif selected_analysis == "🎯 أسباب وعنق التكظز (Bottleneck Analysis)":
+            st.markdown("### 🎯 الحالة الأكثر تكراراً وتسبباً للتكدس")
             most_common = filtered_df["current_status"].mode()
             if not most_common.empty:
-                st.success(f"🎯 أكثر حالة مكررة هي: **{most_common[0]}** (تكررت {len(filtered_df[filtered_df['current_status'] == most_common[0]])} مرة)")
+                st.warning(f"⚠️ الحالة الأكثر تكراراً هي: **{most_common[0]}** (تكررت {len(filtered_df[filtered_df['current_status'] == most_common[0]])} مرة)")
 
-        elif selected_analysis == "🏷️ أكثر حالة مكررة لاسم عميل محدد":
-            st.markdown("### 🏷️ تحليل الحالة المهيمنة لكل عميل")
-            target_company = st.selectbox("اختر العميل:", filtered_df["company_name"].unique())
-            comp_df = filtered_df[filtered_df["company_name"] == target_company]
-            st.dataframe(comp_df, use_container_width=True)
-
+        # 2.5 تحليل SLA
         elif selected_analysis == "⏱️ تحليل الالتزام بالمهل الزمنية (SLA Breakdown)":
             st.markdown("### ⏱️ تحليل SLA والالتزام بالتوقيتات")
-            filtered_df["sla_status"] = filtered_df.apply(lambda row: calculate_sla_status(row["current_status"], row["last_updated_at"])[0], axis=1)
-            fig_sla_pie = px.pie(filtered_df, names="sla_status", hole=0.4, title="مؤشرات الالتزام بالمهل")
-            st.plotly_chart(fig_sla_pie, use_container_width=True)
+            fig_sla = px.pie(filtered_df, names="sla_status", hole=0.4, title="مؤشرات الالتزام بالمهل الزمني")
+            st.plotly_chart(fig_sla, use_container_width=True)
 
-        elif selected_analysis == "📂 استعلام ملفات العملاء المجمعة":
-            st.markdown("### 📂 كشف الملفات المجمعة حسب العميل")
-            sel_c = st.selectbox("اختر اسم الشركة/العميل:", filtered_df["company_name"].unique())
-            st.dataframe(filtered_df[filtered_df["company_name"] == sel_c], use_container_width=True)
+        # 2.6 استعلام الملفات
+        elif selected_analysis == "📂 كشف واستعلام ملفات العملاء التفصيلي":
+            st.markdown("### 📂 كشف الملفات المجمعة للعملاء المحددين")
+            st.dataframe(filtered_df, use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 3: إدارة الحالات
+    # التبويب 3: إدارة الحالات والتتبع
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
@@ -707,8 +748,8 @@ else:
                 'الحالة الحالية': f"⏸️ معلقة (Hold)" if r['holded'] else r['status'],
                 'وضع SLA': sla_label,
                 'الساعات المنقضية': f"{elapsed_h:.1f} ساعة",
-                'الموظف المسؤول': r['creator'],
-                'آخر تحديث': str(r['last_up'])
+                'الموظف المحدث للحالة': r.get('last_status_updater', 'غير محدد'),
+                'آخر تحديث حالة': str(r['last_up'])
             })
 
         df = pd.DataFrame(shipment_list)
@@ -725,7 +766,7 @@ else:
         col_status_change, col_notes = st.columns([2, 2])
 
         with col_status_change:
-            st.markdown("**1. تغيير الحالة التشغيلية أو التعليق:**")
+            st.markdown("**1. تغيير الحالة التشغيلية أو التعليق (يحتسب كتحديث حالة):**")
             all_statuses = [
                 'Under Operation', 'Waiting BL', 'Draft', 
                 'Waiting Confirmation', 'Stamped', 
@@ -751,21 +792,22 @@ else:
                             item['holded'] = 1 if set_hold else 0
                             item['h_reason'] = hold_reason_text.strip() if set_hold else ""
                             item['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            item['last_status_updater'] = user['full_name']  # تسجيل اسم أحدث موظف قام بتغيير الحالة
 
                     update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
                     execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
 
-                    st.success(f"🎉 تم تحديث حالة الملف ({s_data['file_num']}) بنجاح إلى [{new_selected_status}] وتسجيل 1 نقطة تقييم!")
+                    st.success(f"🎉 تم تحديث حالة الملف ({s_data['file_num']}) بنجاح بواسطة ({user['full_name']}) إلى [{new_selected_status}]!")
                     st.rerun()
 
         with col_notes:
-            st.markdown("**2. إضافة ملاحظة ميدانية مفتوحة (Open Note):**")
+            st.markdown("**2. إضافة ملاحظة ميدانية مفتوحة (لا تحتسب كتحديث للحالة):**")
             new_note = st.text_area("اكتب ملاحظتك التوضيحية على هذه الشحنة:", height=110, placeholder="مثال: العميل طلب التأجيل لحين استلام الفاتورة النهائية")
             if st.button("📝 إضافة الملاحظة للسجل", key="add_note_btn"):
                 if new_note.strip() != "":
                     note_sql = "INSERT INTO shipment_notes (shipment_id, added_by_user, note_content) VALUES (?, ?, ?)"
                     execute_query(note_sql, (s_data['id'], user['user_id'], new_note.strip()))
-                    st.success("✅ تم إضافة الملاحظة وتوثيقها باسم الموظف بنجاح.")
+                    st.success("✅ تم توثيق الملاحظة في السجل بنجاح (دون إرجاء أثر على توقيت تحديث الحالة).")
                 else:
                     st.warning("يرجى كتابة نص الملاحظة قبل الضغط على الزر.")
 
@@ -838,7 +880,7 @@ else:
                         "holded": 0,
                         "h_reason": "",
                         "last_up": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        "creator": user['full_name']
+                        "last_status_updater": user['full_name']
                     }
                     st.session_state['active_shipments'].append(new_item)
                     st.success(f"🎉 تم حفظ الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
