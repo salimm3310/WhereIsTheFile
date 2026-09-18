@@ -906,13 +906,13 @@ else:
                     st.session_state['active_shipments'].append(new_item)
                     st.success(f"🎉 تم إضافة الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
-    # ---------------------------------------------------------
-    # التبويب 5: المراسلات والواتساب
+# ---------------------------------------------------------
+    # التبويب 5: المراسلات والواتساب المحدث
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
-        st.subheader("💬 المراسلات الداخلية والتكامل مع WhatsApp")
+        st.subheader("المراسالات")
 
-        tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "📱 إرسال إشعار WhatsApp direct"])
+        tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "WhatsApp"])
 
         with tab_msg:
             col_send, col_inbox = st.columns([2, 3])
@@ -948,20 +948,31 @@ else:
                     """, unsafe_allow_html=True)
 
         with tab_wa:
-            st.markdown("### 📱 إرسال إشعار وتحديث عبر WhatsApp Direct")
-            target_name = st.text_input("اسم العميل/المستلم:", value="أستاذ أحمد - شركة U.S.C")
-            target_phone = st.text_input("رقم الهاتف (مثال: 01212231815):", value="01212231815")
+            st.markdown("### WhatsApp")
+            
+            # اختيار الشحنة لتوليد تفاصيل الرسالة آلياً
+            rows = st.session_state['active_shipments']
+            shipment_options = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r for r in rows}
+            selected_ship_label = st.selectbox("اختر الشحنة لتوليد نص الرسالة تلقائياً:", list(shipment_options.keys()))
+            selected_ship = shipment_options[selected_ship_label]
 
-            template_msg_body = (
-                f"مرحباً {target_name}،\n\n"
-                f"تحديث جديد لشحنتكم ملف رقم (260862115)\n"
-                f"الشركة: U.S.C\n"
-                f"رقم الفاتورة: 3A - 3B\n"
-                f"الحالة الحالية: Under Operation\n\n"
-                f"تحياتنا، Mohamed Salem OPS App"
+            col_wa1, col_wa2 = st.columns(2)
+            with col_wa1:
+                target_name = st.text_input("اسم العميل/المستلم:", value=f"شركة {selected_ship['company']}")
+                target_phone = st.text_input("رقم الهاتف", value="01212231815")
+
+            auto_gen_text = (
+                f"مرحباً أستاذ/ة (عناية شركة {selected_ship['company']})،\n\n"
+                f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
+                f"📂 رقم الملف: {selected_ship['file_num']}\n"
+                f"🔖 رقم الحجز (Booking): {selected_ship['bkg']}\n"
+                f"🧾 رقم الفاتورة: {selected_ship['inv']}\n"
+                f"📌 الحالة الحالية: {selected_ship['status']}\n\n"
+                f"تحياتنا، فريق Mohamed Salem OPS"
             )
 
-            final_msg = st.text_area("معاينة نص الرسالة قبل الإرسال:", value=template_msg_body, height=180)
+            with col_wa2:
+                final_msg = st.text_area("نص الرسالة:", value=auto_gen_text, height=170)
 
             if target_phone.strip() != "":
                 clean_phone = format_whatsapp_phone(target_phone)
@@ -970,10 +981,9 @@ else:
 
                 col_b1, col_b2 = st.columns(2)
                 with col_b1:
-                    st.code(final_msg.strip(), language=None)
+                    st.info(f"رقم المراسلة: **+{clean_phone}**")
                 with col_b2:
-                    st.info(f"📱 الرقم المعالج للإرسال: **+{clean_phone}**")
-                    if st.link_button("🟢 فتح شات الرقم المباشر في WhatsApp", direct_wa_url, use_container_width=True):
+                    if st.link_button("ارسال WhatsApp", direct_wa_url, use_container_width=True):
                         st.session_state['whatsapp_logs'].append({
                             "sender": user['full_name'],
                             "target_name": target_name,
