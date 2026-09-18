@@ -225,11 +225,18 @@ def calculate_sla_status(current_status, last_updated_at):
         return "متأخر (Late)", "status-badge-late", elapsed_hours
 
 # =========================================================
-# 4. الهيدر الرئيسي
+# 4. الهيدر الرئيسي واللوجو المعتمد (logo.jpg)
 # =========================================================
 col_h1, col_h2, col_h3 = st.columns([1, 2, 1])
 with col_h2:
-    st.markdown("<h1 style='text-align: center; color: #2563eb; margin:0;'>📂 تطبيق فين الملف؟</h1>", unsafe_allow_html=True)
+    col_img, col_txt = st.columns([1, 3])
+    with col_img:
+        try:
+            st.image("logo.jpg", width=110)
+        except:
+            st.markdown("📂")
+    with col_txt:
+        st.markdown("<h1 style='color: #2563eb; margin:0; font-size: 28px;'>تطبيق فين الملف؟</h1>", unsafe_allow_html=True)
 
 st.markdown("<h2 class='main-header'>Mohamed Salem OPS App</h2>", unsafe_allow_html=True)
 st.markdown("<p class='sub-header'>نظام إدارة وتتبع الملفات</p>", unsafe_allow_html=True)
