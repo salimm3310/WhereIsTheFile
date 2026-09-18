@@ -1,6 +1,7 @@
 import streamlit as st
 import hashlib
 import re
+import base64
 from datetime import datetime
 import pandas as pd
 import urllib.parse
@@ -8,7 +9,7 @@ import plotly.express as px
 from db_connection import execute_query
 
 # =========================================================
-# 1. إعدادات الصفحة والتصميم العام للهوية البصرية
+# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والخلفية
 # =========================================================
 st.set_page_config(
     page_title="فين الملف؟ - Mohamed Salem OPS App",
@@ -16,13 +17,27 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
+# دالة قراءة وتطبيق صورة الخلفية خلفية المشروع
+def get_base64_of_bin_file(bin_file):
+    try:
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except:
+        return ""
+
+bg_base64 = get_base64_of_bin_file("background.jpg")
+
+st.markdown(f"""
 <style>
-    .stApp {
-        background-color: #f8fafc;
+    .stApp {{
+        background-image: linear-gradient(rgba(248, 250, 252, 0.88), rgba(248, 250, 252, 0.88)), url("data:image/jpg;base64,{bg_base64}");
+        background-attachment: fixed;
+        background-size: cover;
+        background-position: center;
         color: #0f172a;
-    }
-    .main-header {
+    }}
+    .main-header {{
         text-align: center;
         color: #1e3a8a;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -30,14 +45,14 @@ st.markdown("""
         margin-bottom: 2px;
         font-size: 32px;
     }
-    .sub-header {
+    .sub-header {{
         text-align: center;
         color: #475569;
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 25px;
     }
-    .stButton>button {
+    .stButton>button {{
         width: 100%;
         background-color: #2563eb !important;
         color: white !important;
@@ -45,45 +60,45 @@ st.markdown("""
         font-weight: bold;
         padding: 10px;
         border: none;
-    }
-    .stButton>button:hover {
+    }}
+    .stButton>button:hover {{
         background-color: #1d4ed8 !important;
         color: white !important;
-    }
-    .status-badge-ontime {
+    }}
+    .status-badge-ontime {{
         background-color: #dcfce7;
         color: #166534;
         padding: 4px 8px;
         border-radius: 4px;
         font-weight: bold;
-    }
-    .status-badge-alert {
+    }}
+    .status-badge-alert {{
         background-color: #fef9c3;
         color: #854d0e;
         padding: 4px 8px;
         border-radius: 4px;
         font-weight: bold;
-    }
-    .status-badge-late {
+    }}
+    .status-badge-late {{
         background-color: #fee2e2;
         color: #991b1b;
         padding: 4px 8px;
         border-radius: 4px;
         font-weight: bold;
-    }
-    .chat-bubble-in {
+    }}
+    .chat-bubble-in {{
         background-color: #ffffff;
         border-right: 4px solid #2563eb;
         padding: 10px;
         border-radius: 6px;
         margin-bottom: 10px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 2. دوال التشفير ومعالجة أرقام الهاتف
+# 2. دوال التشفير ومعالجة الحسابات
 # =========================================================
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -99,21 +114,33 @@ def format_whatsapp_phone(raw_phone, default_country_code="20"):
         clean_phone = default_country_code + clean_phone[1:]
     return clean_phone
 
-# تثبيت حسابك الرئيسي المعتمد ببياناتك الدقيقة
+# الشاشات الـ 7 الرئيسية للبرنامج
+ALL_MODULES = [
+    "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)",
+    "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)",
+    "➕ إضافة شحنة جديدة (تفكيك الـ 11)",
+    "💬 المراسلات والواتساب (Messaging & WhatsApp)",
+    "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)",
+    "📋 سجل الحالات والتدقيق (Status Logs)",
+    "⚙️ لوحة التحكم الإدارية (Admin Panel)"
+]
+
+# تثبيت حسابك الرئيسي المعتمد بكامل الصلاحيات
 MAIN_ADMIN = {
     "user_id": 1,
     "full_name": "Mohamed Salem",
     "phone_number": "01212231815",
     "password_hash": make_hashes("691011"),
     "role_group": "Admin",
+    "allowed_pages": ALL_MODULES,  # للمدير كافة الشاشات
     "status": "Active"
 }
 
 if 'registered_users' not in st.session_state:
     st.session_state['registered_users'] = [
         MAIN_ADMIN,
-        {"user_id": 2, "full_name": "أحمد علي", "phone_number": "01012345678", "password_hash": make_hashes("123456"), "role_group": "OPS", "status": "Active"},
-        {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "status": "Active"}
+        {"user_id": 2, "full_name": "أحمد علي", "phone_number": "01012345678", "password_hash": make_hashes("123456"), "role_group": "OPS", "allowed_pages": ALL_MODULES[:4], "status": "Active"},
+        {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "allowed_pages": ALL_MODULES[:3], "status": "Active"}
     ]
 
 if 'logged_in' not in st.session_state:
@@ -225,12 +252,11 @@ def calculate_sla_status(current_status, last_updated_at):
         return "متأخر (Late)", "status-badge-late", elapsed_hours
 
 # =========================================================
-# 4. الهيدر الرئيسي مع اللوجو في سطر منفصل وبحجم مكبر
+# 4. الهيدر الرئيسي مع اللوجو بأسلوب مكبر وفي سطر منفصل
 # =========================================================
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
     try:
-        # اللوجو في سطر منفصل في الأعلى وبحجم مكبر (1100px)
         st.image("logo.jpg", width=1100)
     except:
         st.markdown("<h1 style='text-align: center; font-size: 80px;'>📂</h1>", unsafe_allow_html=True)
@@ -273,7 +299,7 @@ if not st.session_state['logged_in']:
                                 st.success(f"✅ أهلاً بك يا {user_found['full_name']}! تم تسجيل الدخول بنجاح.")
                                 st.rerun()
                             else:
-                                st.warning("⏳ حسابك قيد المراجعة وبانتظار اعتماد مدير البرنامج (Mohamed Salem).")
+                                st.warning("⏳ حسابك قيد المراجعة وبانتظار تحديد صلاحياتك واعتماده من مدير البرنامج (Mohamed Salem).")
                         else:
                             st.error("❌ بيانات الدخول غير صحيحة أو الحساب غير موجود.")
 
@@ -281,13 +307,11 @@ if not st.session_state['logged_in']:
         col_r1, col_r2, col_r3 = st.columns([1, 2, 1])
         with col_r2:
             st.markdown("### 📝 طلب إنشاء حساب جديد")
-            st.info("💡 سيتم إرسال طلب الحساب لمدير البرنامج لتمكينه وتحديد مجموعته واعتماده قبل الدخول.")
+            st.info("💡 سيتم إرسال طلب الحساب لمدير البرنامج لتمكينه وتحديد المزايا والصلاحيات المسموحة له قبل الدخول.")
             with st.form("register_form"):
                 reg_name = st.text_input("الاسم:")
                 reg_phone = st.text_input("رقم الهاتف (سيستخدم كاسم مستخدم):")
                 reg_pass = st.text_input("كلمة المرور:", type="password")
-                
-                # تم حذف اختيار المجموعة بناءً على طلبك، لتكون الخيار الحصري للمدير عند الاعتماد
                 
                 submit_reg = st.form_submit_button("إرسال طلب التسجيل")
 
@@ -298,23 +322,24 @@ if not st.session_state['logged_in']:
                             "full_name": reg_name.strip(),
                             "phone_number": reg_phone.strip(),
                             "password_hash": make_hashes(reg_pass.strip()),
-                            "role_group": "Unassigned",  # سيتم تحديد المجموعة بواسطة المدير عند الاعتماد
+                            "role_group": "Unassigned",
+                            "allowed_pages": [],  # ينتظر تحديد الشاشات المسموحة له من المدير
                             "status": "Pending"
                         }
                         st.session_state['registered_users'].append(new_u)
-                        st.success("🎉 تم إرسال طلب الحساب بنجاح! يرجى التواصل مع مدير البرنامج (Mohamed Salem) لتحديد مجموعتك وتنشيط حسابك.")
+                        st.success("🎉 تم إرسال طلب الحساب بنجاح! يرجى التواصل مع مدير البرنامج (Mohamed Salem) لتحديد صلاحيات الشاشات وتنشيط حسابك.")
                     else:
                         st.error("⚠️ يرجى تعبئة كافة الحقول المطلوبة.")
 
 # =========================================================
-# 6. الواجهة الرئيسية بعد تسجيل الدخول (كافة التبويبات الـ 7 الكاملة)
+# 6. الواجهة الرئيسية بعد تسجيل الدخول (حسب شاشات الصلاحية لكل مستخدم)
 # =========================================================
 else:
     user = st.session_state['user_info']
     
     col_u, col_l = st.columns([4, 1])
     with col_u:
-        st.success(f"👤 المستخدم: **{user['full_name']}** | المجموعة الصلاحية: **{user['role_group']}**")
+        st.success(f"👤 المستخدم: **{user['full_name']}** | المجموعة: **{user['role_group']}**")
     with col_l:
         if st.button("تسجيل الخروج"):
             st.session_state['logged_in'] = False
@@ -323,19 +348,15 @@ else:
 
     st.write("---")
 
-    menu = [
-        "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)",
-        "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)",
-        "➕ إضافة شحنة جديدة (تفكيك الـ 11)",
-        "💬 المراسلات والواتساب (Messaging & WhatsApp)",
-        "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)",
-        "📋 سجل الحالات والتدقيق (Status Logs)",
-        "⚙️ لوحة التحكم الإدارية (Admin Panel)"
-    ]
-    choice = st.sidebar.selectbox("القائمة الرئيسية", menu)
+    # إظهار الشاشات المسموحة فقط لهذا المستخدم بناءً على صلاحيات الاعتماد من المدير
+    allowed_menu = user.get('allowed_pages', ALL_MODULES)
+    if not allowed_menu:
+        allowed_menu = ALL_MODULES
+
+    choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu)
 
     # ---------------------------------------------------------
-    # التبويب 1: التحليلات الـ 7 الكاملة مع Plotly
+    # التبويب 1: التحليلات الـ 7
     # ---------------------------------------------------------
     if choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
@@ -419,7 +440,7 @@ else:
             st.dataframe(filtered_df[filtered_df["company_name"] == sel_c], use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 2: إدارة الحالات والتعليق والملاحظات وتحديث الجلسة
+    # التبويب 2: إدارة الحالات وتتبع المهل والتعليق والملاحظات
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
@@ -502,7 +523,7 @@ else:
                     st.warning("يرجى كتابة نص الملاحظة قبل الضغط على الزر.")
 
     # ---------------------------------------------------------
-    # التبويب 3: تفكيك السطر المرجعي الـ 11 وحفظ الشحنة
+    # التبويب 3: تفكيك السطر المرجعي الـ 11
     # ---------------------------------------------------------
     elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
         st.subheader("📋 تفكيك السطر المرجعي وإدخال الشحنة (11 حقل)")
@@ -657,7 +678,7 @@ else:
         ]), use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 6: سجل الحالات والتدقيق
+    # التبويب 6: سجل الحالات
     # ---------------------------------------------------------
     elif choice == "📋 سجل الحالات والتدقيق (Status Logs)":
         st.subheader("📋 سجل الحالات والتدقيق التاريخي (Status Logs & Audit Trail)")
@@ -668,43 +689,51 @@ else:
         ]), use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 7: لوحة التحكم الإدارية (اعتماد وتحديد مجموعة الحسابات الحصري)
+    # التبويب 7: لوحة التحكم الإدارية (تحديد الصلاحيات والمجموعات الحصري)
     # ---------------------------------------------------------
     elif choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
-        st.subheader("⚙️ لوحة تحكم المدير وتحديد المجموعات وتنشيط الحسابات (Mohamed Salem Control Panel)")
+        st.subheader("⚙️ لوحة تحكم المدير وتحديد المجموعات وصلاحيات الشاشات (Mohamed Salem Control Panel)")
 
-        tab_users_act, tab_sla_cfg = st.tabs(["👥 اعتماد وتنشيط تحديد مجموعات الحسابات", "⏱️ إعدادات المهل SLA"])
+        tab_users_act, tab_sla_cfg = st.tabs(["👥 اعتماد وتحديد صلاحيات الحسابات", "⏱️ إعدادات المهل SLA"])
 
         with tab_users_act:
-            st.markdown("### 👥 طلبات الحسابات بانتظار تحديد المجموعة والاعتماد")
+            st.markdown("### 👥 طلبات الحسابات بانتظار الاعتماد وتحديد الصلاحيات")
             pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
             
             if len(pending_list) > 0:
                 for p_user in pending_list:
-                    c_u1, c_u2, c_u3, c_u4 = st.columns([2, 2, 2, 2])
-                    c_u1.write(f"**الاسم:** {p_user['full_name']}")
-                    c_u2.write(f"**الهاتف:** {p_user['phone_number']}")
+                    st.markdown(f"#### 👤 المستدعي: **{p_user['full_name']}** ({p_user['phone_number']})")
+                    col_p1, col_p2 = st.columns([1, 2])
                     
-                    # الخيار الحصري للمدير لتحديد المجموعة الصلاحية
-                    assigned_group = c_u3.selectbox(
-                        "تحديد المجموعة الصلاحية:", 
-                        ["OPS", "Sys 1", "Sys 2", "Admin"], 
-                        key=f"grp_sel_{p_user['user_id']}"
-                    )
+                    with col_p1:
+                        assigned_group = st.selectbox(
+                            "1. تحديد المجموعة الصلاحية:", 
+                            ["OPS", "Sys 1", "Sys 2", "Admin"], 
+                            key=f"grp_{p_user['user_id']}"
+                        )
                     
-                    if c_u4.button(f"✅ اعتماد وتفعيل الحساب", key=f"act_{p_user['user_id']}"):
+                    with col_p2:
+                        st.markdown("**2. حدد الشاشات واللوحات المسموح إظهارها له:**")
+                        selected_pages = []
+                        for module in ALL_MODULES:
+                            if st.checkbox(module, value=True, key=f"p_{p_user['user_id']}_{module}"):
+                                selected_pages.append(module)
+                    
+                    if st.button(f"✅ اعتماد الحساب وتحديد الصلاحيات لـ {p_user['full_name']}", key=f"btn_act_{p_user['user_id']}"):
                         p_user['role_group'] = assigned_group
+                        p_user['allowed_pages'] = selected_pages
                         p_user['status'] = "Active"
-                        st.success(f"🎉 تم اعتماد وتفعيل حساب {p_user['full_name']} بالمجموعة ({assigned_group}) بنجاح!")
+                        st.success(f"🎉 تم تفعيل حساب {p_user['full_name']} وتخصيص {len(selected_pages)} شاشة مسموحة له بنجاح!")
                         st.rerun()
+                    st.write("---")
             else:
                 st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
 
             st.write("---")
-            st.markdown("### 📋 قائمة الحسابات المفعلة بالنظام")
-            active_df = pd.DataFrame([u for u in st.session_state['registered_users'] if u['status'] == "Active"])
-            if not active_df.empty:
-                st.dataframe(active_df[["full_name", "phone_number", "role_group", "status"]], use_container_width=True)
+            st.markdown("### 📋 قائمة الحسابات المفعلة والصلاحيات")
+            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+            for au in active_users:
+                st.write(f"• **{au['full_name']}** | الهاتف: `{au['phone_number']}` | المجموعة: **{au['role_group']}** | عدد الشاشات المسموحة: **{len(au.get('allowed_pages', ALL_MODULES))}**")
 
         with tab_sla_cfg:
             st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
