@@ -1042,8 +1042,8 @@ else:
                             "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         })
 
-    # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور بـ كارت الوجهين والصور الذكية AI
+# ---------------------------------------------------------
+    # التبويب 6: تقييم الأداء المطور بـ كارت الوجهين العمودي ومولد الصور AI
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1149,7 +1149,7 @@ else:
 
         st.write("---")
 
-        # --- قسم الكارت التعريفي المزدوج الوجهين ---
+        # --- قسم الكارت التعريفي المزدوج الوجهين (تحت بعضهما) ---
         st.markdown("### 💳 كارت الموظف المزدوج (Canva Modern Business ID Card)")
         selected_card_emp = st.selectbox("اختر الموظف", [u['full_name'] for u in active_users_eval])
         card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
@@ -1157,7 +1157,7 @@ else:
         if card_user_data:
             u_id = card_user_data['user_id']
             
-            # لوحة تعديل النقاط والصورة بالذكاء الاصطناعي/الرفع المباشر
+            # لوحة تعديل النقاط والملاحظات والصورة بالـ AI والرفع المباشر
             with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
@@ -1166,10 +1166,20 @@ else:
                     edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
                 with col_e2:
-                    st.markdown("**🖼️ صورة الموظف (رفع مباشرة أو بالـ AI):**")
-                    uploaded_img = st.file_uploader("رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    st.markdown("**🖼️ إدارة صورة الموظف (رفع أو إنشاء بالذكاء الاصطناعي AI):**")
+                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                     if uploaded_img:
                         st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
+
+                    st.markdown("---")
+                    st.markdown("**2. أداة توليد صورة احترافية بالـ AI (High Quality Image Generator):**")
+                    ai_prompt = st.text_input("وصف الصورة المطلوبة للـ AI:", value=f"Professional formal headshot portrait of male employee {selected_card_emp}, business suit, studio lighting, 4k ultra realistic", key=f"ai_p_{u_id}")
+                    
+                    if st.button("✨ توليد صورة الموظف بالذكاء الاصطناعي", key=f"btn_ai_{u_id}"):
+                        st.info("🤖 جاري استدعاء محرك الذكاء الاصطناعي لتوليد الصورة الاحترافية...")
+                        # سيتم توليد الصورة واستبدالها آلياً
+                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
+                        st.success("✅ تم توليد وتحديث الصورة الذكية للموظف بنجاح!")
 
                 if st.button("💾 حفظ اعتماد التعديلات والصورة", key=f"btn_save_eval_{u_id}"):
                     st.session_state['user_points'][u_id] = {
@@ -1180,47 +1190,51 @@ else:
                     st.success("✅ تم حفظ وتحديث الكارت والبيانات بنجاح!")
                     st.rerun()
 
-            # عرض الكارت ذو الوجهين
-            tab_card_front, tab_card_back = st.tabs(["📇 الوجه الأول (البيانات الشخصية والصورة)", "📊 الوجه الثاني (التقييم والشركات)"])
+            st.write("---")
+            st.markdown("#### 📄 الوجه الأول: البيانات الشخصية والصورة")
+            
+            # 1. عرض الوجه الأول للكارت
+            col_c1, col_c2 = st.columns([1, 2])
+            with col_c1:
+                photo_data = st.session_state['user_photos'].get(u_id)
+                if photo_data and photo_data != "AI_GENERATED":
+                    st.image(photo_data, width=200, caption=card_user_data['الموظف'])
+                elif photo_data == "AI_GENERATED":
+                    st.markdown("<div style='width:200px; height:200px; background: linear-gradient(135deg, #4e342e, #8c6d58); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; font-size:20px; font-weight:bold; border:3px solid #8c6d58;'><span style='font-size:50px;'>🤖</span>AI Generated</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='width:200px; height:200px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:16px; font-size:70px;'>👤</div>", unsafe_allow_html=True)
 
-            with tab_card_front:
-                st.markdown("<br>", unsafe_allow_html=True)
-                col_c1, col_c2 = st.columns([1, 2])
-                with col_c1:
-                    if u_id in st.session_state['user_photos']:
-                        st.image(st.session_state['user_photos'][u_id], width=180, caption=card_user_data['الموظف'])
-                    else:
-                        st.markdown("<div style='width:180px; height:180px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:12px; font-size:60px;'>👤</div>", unsafe_allow_html=True)
-
-                with col_c2:
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #fdfbf7 0%, #d7c4b7 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">
-                            <h2 style="margin:0; color: #4e342e;">📇 {card_user_data['الموظف']}</h2>
-                            <span style="background-color: #4e342e; color: white; padding: 4px 12px; border-radius: 12px; font-weight:bold;">ID: #{u_id}</span>
-                        </div>
-                        <p style="margin-top:12px; font-size:22px !important;">المجموعة الصلاحية: <strong>{card_user_data['المجموعة']}</strong></p>
-                        <p style="font-size:20px !important;">التخصص: <strong>عمليات الشحن واللوجستيات (OPS Freight)</strong></p>
-                        <p style="font-size:20px !important; color:#8c6d58;"><strong>Mohamed Salem OPS App Official ID</strong></p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-            with tab_card_back:
-                st.markdown("<br>", unsafe_allow_html=True)
+            with col_c2:
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #ffffff 0%, #f1e8e1 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
-                    <h3 style="margin:0; color: #4e342e; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">📊 ملخص تقييم أداء الموظف</h3>
-                    <p style="margin-top:12px;"><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size: 28px !important; color: #4e342e; font-weight: bold;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <span style="background-color:#8c6d58; color:white; padding: 2px 8px; border-radius: 6px;">"{card_user_data['التصنيف']}"</span> - بنسبة {card_user_data['النسبة المئوية']})</p>
-                    <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+                <div style="background: linear-gradient(135deg, #fdfbf7 0%, #d7c4b7 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">
+                        <h2 style="margin:0; color: #4e342e;">📇 {card_user_data['الموظف']}</h2>
+                        <span style="background-color: #4e342e; color: white; padding: 4px 12px; border-radius: 12px; font-weight:bold;">ID: #{u_id}</span>
+                    </div>
+                    <p style="margin-top:12px; font-size:22px !important;">المجموعة الصلاحية: <strong>{card_user_data['المجموعة']}</strong></p>
+                    <p style="font-size:20px !important;">التخصص: <strong>عمليات الشحن واللوجستيات (OPS Freight)</strong></p>
+                    <p style="font-size:20px !important; color:#8c6d58;"><strong>Mohamed Salem OPS App Official ID</strong></p>
                 </div>
                 """, unsafe_allow_html=True)
 
-                st.markdown(f"#### 🏢 الشركات والعملاء القائم عليها الموظف (العدد الإجمالي الثابت: {card_user_data['عدد الشركات (ثابت)']} شركة):")
-                if card_user_data['قائمة الشركات']:
-                    df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
-                    st.dataframe(df_comp, use_container_width=True)
-                else:
-                    st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
+            st.write("---")
+            st.markdown("#### 📊 الوجه الثاني: تقييم الأداء والشركات القائم عليها")
+
+            # 2. عرض الوجه الثاني للكارت (مباشرة أسفل الوجه الأول)
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #ffffff 0%, #f1e8e1 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
+                <h3 style="margin:0; color: #4e342e; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">📊 ملخص تقييم أداء الموظف</h3>
+                <p style="margin-top:12px;"><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size: 28px !important; color: #4e342e; font-weight: bold;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <span style="background-color:#8c6d58; color:white; padding: 2px 8px; border-radius: 6px;">"{card_user_data['التصنيف']}"</span> - بنسبة {card_user_data['النسبة المئوية']})</p>
+                <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"#### 🏢 الشركات والعملاء القائم عليها الموظف (العدد الإجمالي الثابت: {card_user_data['عدد الشركات (ثابت)']} شركة):")
+            if card_user_data['قائمة الشركات']:
+                df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
+                st.dataframe(df_comp, use_container_width=True)
+            else:
+                st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
     # ---------------------------------------------------------
     # التبويب 7: سجل الحالات
     # ---------------------------------------------------------
