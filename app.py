@@ -919,16 +919,44 @@ else:
             with col_send:
                 st.markdown("### 📤 إرسال رسالة داخلية")
                 
-                employee_list = [f"{u['full_name']} ({u['role_group']})" for u in st.session_state['registered_users'] if u['status'] == 'Active']
-                target_emp = st.selectbox("إلى المستخدم / الفريق:", employee_list)
-                msg_body = st.text_area("نص الرسالة:", height=100)
-                
+                # قائمة الموظفين المفعلين
+                active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
+                emp_map = {f"{u['full_name']} ({u['role_group']})": u for u in active_users_list}
+                target_emp_label = st.selectbox("إلى المستخدم / الفريق:", list(emp_map.keys()))
+                target_emp_obj = emp_map[target_emp_label]
+
+                # الاختيار بين رسالة عادية أو تنبيه لشحنة
+                msg_type = st.radio("نوع الرسالة الداخلية:", ["رسالة عادية", "تنبيه/تحديث لشحنة محددة"], horizontal=True)
+
+                if msg_type == "تنبيه/تحديث لشحنة محددة":
+                    rows = st.session_state['active_shipments']
+                    ship_map = {f"ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
+                    selected_s_label = st.selectbox("اختر الشحنة المراد التنبيه عليها:", list(ship_map.keys()))
+                    selected_s = ship_map[selected_s_label]
+
+                    dynamic_body = (
+                        f"مرحباً أستاذ/ة {target_emp_obj['full_name']}\n\n"
+                        f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
+                        f"📂 رقم الملف: {selected_s['file_num']}\n"
+                        f"🔖 اسم الشركة: {selected_s['company']}\n"
+                        f"🧾 رقم الفاتورة: {selected_s['inv']}\n"
+                        f"📌 الحالة الحالية: {selected_s['status']}"
+                    )
+                    user_editable_text = st.text_area("نص التحديث التوضيحي (إن وجد):", value=dynamic_body, height=160)
+                else:
+                    user_editable_text = st.text_area("نص الرسالة الداخلية:", height=120)
+
+                # الخاتمة الثابتة غير القابلة للتعديل
+                fixed_footer = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
+                st.info(f"🔒 الخاتمة الملحقة بالرسالة تلقائياً:\n\n{fixed_footer}")
+
                 if st.button("🚀 إرسال الرسالة الداخلية"):
-                    if msg_body.strip() != "":
+                    if user_editable_text.strip() != "":
+                        full_final_msg = f"{user_editable_text.strip()}\n\n{fixed_footer}"
                         st.session_state['internal_messages'].append({
                             "sender": user['full_name'],
-                            "recipient": target_emp,
-                            "text": msg_body.strip(),
+                            "recipient": target_emp_label,
+                            "text": full_final_msg,
                             "time": datetime.now().strftime('%H:%M %p')
                         })
                         st.success("✅ تم إرسال الرسالة الداخلية وتوثيقها بنجاح!")
