@@ -978,8 +978,8 @@ else:
         with tab_wa:
             st.markdown("### WhatsApp")
             
-            # 1. تحديد نوع المستلم
-            recipient_type = st.radio("تحديد نوع المستلم:", ["العميل", "مستخدم/موظف بالبرنامج"], horizontal=True)
+            # 1. تحديد نوع المستلم (الموظف هو الخيار الافتراضي)
+            recipient_type = st.radio("تحديد نوع المستلم:", ["مستخدم/موظف بالبرنامج", "العميل"], horizontal=True)
 
             # 2. اختيار الشحنة المراد مراسلتها
             rows = st.session_state['active_shipments']
