@@ -1043,7 +1043,7 @@ else:
                         })
 
     # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور والتفاعلي بالكامل
+    # التبويب 6: تقييم الأداء المطور والتفاعلي بالكامل (النسخة النهائية)
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1069,7 +1069,7 @@ else:
         with c_f2:
             filter_rank = st.selectbox("🏆 ترتيب الأداء والتقييم:", ["الكل (افتراضي)", "الأعلى تقييماً (Top Performers)", "الأقل تقييماً (Lowest Performers)"])
         with c_f3:
-            card_style = st.selectbox("🎨 شكل وطابع كارت الموظف:", ["الكلاسيكي الأزرق", "الحديث الأنيق", "الداكن المتباين"])
+            card_style = st.selectbox("🎨 شكل وطابع كارت الموظف:", ["المودرن الحديث (Brown & White ID Card)", "الكلاسيكي الأزرق", "الداكن المتباين"])
 
         # استخراج وتجهيز البيانات
         raw_eval_list = []
@@ -1083,7 +1083,7 @@ else:
             total_ops = len(emp_shipments)
             emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s and s['company']]))
             
-            # حساب النسبة المئوية الدقيقة بناءً على إنجاز الملفات
+            # حساب النسبة المئوية الدقيقة
             if closed_ops > 0:
                 ratio = (pts['earned'] / closed_ops) * 100.0
                 if ratio > 100.0: ratio = 100.0
@@ -1112,18 +1112,18 @@ else:
                 "صافي التقييم": net,
                 "النسبة المئوية": f"{ratio:.1f}%",
                 "التصنيف": rating_category,
-                "عدد الشركات": len(emp_companies),
+                "عدد الشركات (ثابت)": len(emp_companies),
                 "قائمة الشركات": emp_companies,
                 "ملاحظات المدير": pts['notes']
             })
 
         df_eval = pd.DataFrame(raw_eval_list)
 
-        # تطبيق تصفية الموظف
+        # 1. تصفية الموظف
         if filter_emp != "الكل":
             df_eval = df_eval[df_eval["الموظف"] == filter_emp]
 
-        # تطبيق ترتيب الأداء التفاعلي
+        # 2. تفعيل ترتيب الأداء الفعلي بفرز الصفوف
         if filter_rank == "الأعلى تقييماً (Top Performers)":
             df_eval = df_eval.sort_values(by="صافي التقييم", ascending=False)
         elif filter_rank == "الأقل تقييماً (Lowest Performers)":
@@ -1134,16 +1134,16 @@ else:
         df_eval.index = df_eval.index + 1
         df_eval.index.name = "#"
 
-        st.markdown("#### 📋 جدول التقييم العام للموظفين (قابل للتعديل المباشر)")
+        st.markdown("#### 📋 جدول التقييم العام للموظفين")
         display_df = df_eval.drop(columns=["user_id", "قائمة الشركات"])
         
-        # جدول تفاعلي قابل للتعديل الفوري
-        edited_df = st.data_editor(display_df, use_container_width=True, key="eval_table_editor")
+        # عرض ثابت آمن وغير قابل للتعديل المباشر لحماية العمليات الحسابية
+        st.dataframe(display_df, use_container_width=True)
 
-        # أزرار التصدير وتحديث التقييم اليدوي وإعادة الضبط
+        # أزرار التصدير وإعادة الضبط
         col_ex1, col_ex2 = st.columns([2, 2])
         with col_ex1:
-            csv_data = edited_df.to_csv(index=True).encode('utf-8-sig')
+            csv_data = display_df.to_csv(index=True).encode('utf-8-sig')
             st.download_button("📥 تصدير التقرير (Excel / CSV)", data=csv_data, file_name="Performance_Report.csv", mime="text/csv", use_container_width=True)
         
         with col_ex2:
@@ -1177,28 +1177,47 @@ else:
                     st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
                     st.rerun()
 
-            # ألوان وطابع الكارت التعريفي
-            bg_color = "#f8fafc"
-            border_color = "#2563eb"
-            if card_style == "الحديث الأنيق":
-                bg_color = "#f0fdf4"
-                border_color = "#16a34a"
-            elif card_style == "الداكن المتباين":
-                bg_color = "#1e293b"
-                border_color = "#38bdf8"
+            # --- الكارت التعريفي بتصميم Canva الحديث (Brown & White Modern ID Card) ---
+            if card_style == "المودرن الحديث (Brown & White ID Card)":
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #fdfbf7 0%, #d7c4b7 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 25px; color: #3e2723; box-shadow: 0 8px 16px rgba(0,0,0,0.15);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8c6d58; padding-bottom: 12px; margin-bottom: 15px;">
+                        <div>
+                            <h2 style="margin:0; color: #4e342e; font-size: 28px !important;">📇 {card_user_data['الموظف']}</h2>
+                            <p style="margin:0; color: #6d4c41; font-size: 20px !important;">المجموعة: <strong>{card_user_data['المجموعة']}</strong></p>
+                        </div>
+                        <div style="background-color: #4e342e; color: #ffffff; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 18px !important;">
+                            ID: #{card_user_data['user_id']}
+                        </div>
+                    </div>
+                    <div style="background-color: rgba(255, 255, 255, 0.7); border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+                        <p style="margin: 5px 0;"><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size: 28px !important; color: #4e342e; font-weight: bold;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <span style="background-color:#8c6d58; color:white; padding: 2px 8px; border-radius: 6px;">"{card_user_data['التصنيف']}"</span> - بنسبة {card_user_data['النسبة المئوية']})</p>
+                        <p style="margin: 5px 0;"><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-            text_color = "#020617" if card_style != "الداكن المتباين" else "#ffffff"
+            elif card_style == "الحديث الأنيق":
+                st.markdown(f"""
+                <div style="background-color: #f0fdf4; border-right: 8px solid #16a34a; padding: 20px; border-radius: 12px; color: #020617; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0; color: #16a34a;">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
+                    <hr style="border-color: #16a34a;">
+                    <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:#16a34a;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <strong>"{card_user_data['التصنيف']}"</strong> - بنسبة {card_user_data['النسبة المئوية']})</p>
+                    <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-            st.markdown(f"""
-            <div style="background-color: {bg_color}; border-right: 8px solid {border_color}; padding: 20px; border-radius: 12px; color: {text_color}; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h3 style="margin:0; color: {border_color};">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
-                <hr style="border-color: {border_color};">
-                <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:{border_color};">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <strong>"{card_user_data['التصنيف']}"</strong> - بنسبة {card_user_data['النسبة المئوية']})</p>
-                <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="background-color: #1e293b; border-right: 8px solid #38bdf8; padding: 20px; border-radius: 12px; color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0; color: #38bdf8;">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
+                    <hr style="border-color: #38bdf8;">
+                    <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:#38bdf8;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <strong>"{card_user_data['التصنيف']}"</strong> - بنسبة {card_user_data['النسبة المئوية']})</p>
+                    <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-            st.markdown(f"#### 🏢 الشركات والعملاء المسندة للموظف (العدد الكلي: {card_user_data['عدد الشركات']} شركة / عميل):")
+            st.markdown(f"#### 🏢 الشركات والعملاء المسندة للموظف (العدد الكلي الثابت: {card_user_data['عدد الشركات (ثابت)']} شركة / عميل):")
             if card_user_data['قائمة الشركات']:
                 df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
                 st.dataframe(df_comp, use_container_width=True)
