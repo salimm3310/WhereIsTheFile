@@ -9,7 +9,7 @@ import plotly.express as px
 from db_connection import execute_query
 
 # =========================================================
-# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والتباين
+# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والتباين المحدث
 # =========================================================
 st.set_page_config(
     page_title="فين الملف؟ - Mohamed Salem OPS App",
@@ -17,7 +17,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# دالة قراءة وتطبيق صورة الخلفية للمشروع
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, 'rb') as f:
@@ -28,11 +27,11 @@ def get_base64_of_bin_file(bin_file):
 
 bg_base64 = get_base64_of_bin_file("background.jpg")
 
-# تطبيق التباين العالي: خلفيات بيضاء مريحة للبيانات + خطوط 26px للعناوين و 24px للبيانات
+# الشفافية المحدثة بنسبة 80% (زيادة 5%) مع خطوط 26px للعناوين و 24px للبيانات
 st.markdown(f"""
 <style>
     .stApp {{
-        background-image: linear-gradient(rgba(241, 245, 249, 0.75), rgba(241, 245, 249, 0.75)), url("data:image/jpg;base64,{bg_base64}");
+        background-image: linear-gradient(rgba(241, 245, 249, 0.80), rgba(241, 245, 249, 0.80)), url("data:image/jpg;base64,{bg_base64}");
         background-attachment: fixed;
         background-size: cover;
         background-position: center;
@@ -41,7 +40,6 @@ st.markdown(f"""
         font-weight: 800 !important;
     }}
     
-    /* عناوين البرنامج الرئيسية والفرعية - 26px وثقيلة جداً */
     h1, h2, h3, .main-header {{
         font-size: 26px !important;
         font-weight: 800 !important;
@@ -58,16 +56,14 @@ st.markdown(f"""
         margin-bottom: 25px;
     }}
 
-    /* نصوص البيانات والجداول والحقول والقوائم المنسدلة والبطاقات - 24px وثقيل للوضوح */
     p, label, span, div, input, select, textarea, button, .stDataFrame, .stSelectbox, .stTextInput {{
         font-size: 24px !important;
         font-weight: 800 !important;
         color: #020617 !important;
     }}
 
-    /* تحسين التباين بخلفية بيضاء ناصعة للجداول والحقول والبطاقات */
     .stDataFrame, .stForm, div[data-testid="stExpander"], div[data-testid="stMetricValue"] {{
-        background-color: rgba(255, 255, 255, 0.95) !important;
+        background-color: rgba(255, 255, 255, 0.96) !important;
         border-radius: 12px;
         padding: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -133,7 +129,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 2. دوال التشفير ومعالجة الحسابات
+# 2. دوال التشفير والتنظيف
 # =========================================================
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -149,18 +145,17 @@ def format_whatsapp_phone(raw_phone, default_country_code="20"):
         clean_phone = default_country_code + clean_phone[1:]
     return clean_phone
 
-# الشاشات الـ 7 الرئيسية للبرنامج
+# قائمة كافة الشاشات الأساسية
 ALL_MODULES = [
+    "⚙️ لوحة التحكم الإدارية (Admin Panel)",
     "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)",
     "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)",
     "➕ إضافة شحنة جديدة (تفكيك الـ 11)",
     "💬 المراسلات والواتساب (Messaging & WhatsApp)",
     "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)",
-    "📋 سجل الحالات والتدقيق (Status Logs)",
-    "⚙️ لوحة التحكم الإدارية (Admin Panel)"
+    "📋 سجل الحالات والتدقيق (Status Logs)"
 ]
 
-# تثبيت حسابك الرئيسي المعتمد بكامل الصلاحيات
 MAIN_ADMIN = {
     "user_id": 1,
     "full_name": "Mohamed Salem",
@@ -174,9 +169,16 @@ MAIN_ADMIN = {
 if 'registered_users' not in st.session_state:
     st.session_state['registered_users'] = [
         MAIN_ADMIN,
-        {"user_id": 2, "full_name": "أحمد علي", "phone_number": "01012345678", "password_hash": make_hashes("123456"), "role_group": "OPS", "allowed_pages": ALL_MODULES[:4], "status": "Active"},
-        {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "allowed_pages": ALL_MODULES[:3], "status": "Active"}
+        {"user_id": 2, "full_name": "أحمد علي", "phone_number": "01012345678", "password_hash": make_hashes("123456"), "role_group": "OPS", "allowed_pages": ALL_MODULES[1:5], "status": "Active"},
+        {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "allowed_pages": ALL_MODULES[1:4], "status": "Active"}
     ]
+
+if 'user_points' not in st.session_state:
+    st.session_state['user_points'] = {
+        1: {"earned": 10, "deducted": 0, "notes": "تقييم المدير الأسبوعي"},
+        2: {"earned": 8, "deducted": 1, "notes": "تأخير ملف رقم 260862116"},
+        3: {"earned": 5, "deducted": 0, "notes": "أداء متوافق"}
+    }
 
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
@@ -193,11 +195,18 @@ if 'active_shipments' not in st.session_state:
 
 if 'internal_messages' not in st.session_state:
     st.session_state['internal_messages'] = [
-        {"sender": "Mohamed Salem", "text": "مرحباً بك في نظام إدارة وتتبع الملفات.", "time": "10:00 AM"}
+        {"sender": "Mohamed Salem", "recipient": "أحمد علي (OPS)", "text": "يرجى متابعة ملف الشحنة 260862116 اليوم.", "time": "10:00 AM"},
+        {"sender": "أحمد علي", "recipient": "Mohamed Salem (Admin)", "text": "تم استلام التعليمات وجاري العرض على الخط.", "time": "10:15 AM"}
+    ]
+
+if 'whatsapp_logs' not in st.session_state:
+    st.session_state['whatsapp_logs'] = [
+        {"sender": "Mohamed Salem", "target_name": "أستاذ أحمد - U.S.C", "phone": "201212231815", "text": "تحديث جديد لشحنتكم ملف رقم (260862115)", "time": "2026-09-18 10:30:00"},
+        {"sender": "أحمد علي", "target_name": "شركة CFA Global", "phone": "201012345678", "text": "تنبيه: تم رفع بوليصة الشحن بانتظار الاعتماد", "time": "2026-09-18 11:45:00"}
     ]
 
 # =========================================================
-# 3. دالة تفكيك السطر المرجعي الـ 11 حقل
+# 3. دالة تفكيك السطر المرجعي
 # =========================================================
 def parse_reference_string(raw_text):
     parts = [p.strip() for p in raw_text.split(' - ') if p.strip() != '']
@@ -287,7 +296,7 @@ def calculate_sla_status(current_status, last_updated_at):
         return "متأخر (Late)", "status-badge-late", elapsed_hours
 
 # =========================================================
-# 4. الهيدر الرئيسي مع اللوجو بأسلوب مكبر وفي سطر منفصل
+# 4. الهيدر الرئيسي
 # =========================================================
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
@@ -301,7 +310,7 @@ st.markdown("<h2 class='main-header'>Mohamed Salem OPS App</h2>", unsafe_allow_h
 st.markdown("<p class='sub-header'>نظام إدارة وتتبع الملفات</p>", unsafe_allow_html=True)
 
 # =========================================================
-# 5. شاشة تسجيل الدخول وإنشاء حساب جديد المعتمدة
+# 5. شاشة تسجيل الدخول وإنشاء حساب جديد
 # =========================================================
 if not st.session_state['logged_in']:
     tab_login, tab_register = st.tabs(["🔑 تسجيل الدخول", "📝 إنشاء حساب جديد"])
@@ -367,7 +376,7 @@ if not st.session_state['logged_in']:
                         st.error("⚠️ يرجى تعبئة كافة الحقول المطلوبة.")
 
 # =========================================================
-# 6. الواجهة الرئيسية بعد تسجيل الدخول (حسب شاشات الصلاحية لكل مستخدم)
+# 6. الواجهة الرئيسية بعد تسجيل الدخول
 # =========================================================
 else:
     user = st.session_state['user_info']
@@ -387,12 +396,217 @@ else:
     if not allowed_menu:
         allowed_menu = ALL_MODULES
 
-    choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu)
+    # اختيار الشاشة الافتراضية
+    choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
     # ---------------------------------------------------------
-    # التبويب 1: التحليلات الـ 7
+    # التبويب 1: لوحة التحكم الإدارية للمدير الرئيسي (Admin Panel)
     # ---------------------------------------------------------
-    if choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
+    if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
+        st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
+
+        tab_users_act, tab_user_edit, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
+            "👥 طلبات الحسابات بانتظار الاعتماد",
+            "🛠️ إعدادات الحسابات المفعلة والصلاحيات",
+            "📨 صندوق البريد وتتبع الواتساب الخارجي",
+            "🏆 تقييم الموظفين والتحكم بالنقاط",
+            "⏱️ إعدادات المهل SLA"
+        ])
+
+        # 1.1 اعتماد الطلبات
+        with tab_users_act:
+            st.markdown("### 👥 طلبات الحسابات بانتظار الاعتماد وتحديد الصلاحيات")
+            pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
+            
+            if len(pending_list) > 0:
+                for p_user in pending_list:
+                    st.markdown(f"#### 👤 المستدعي: **{p_user['full_name']}** ({p_user['phone_number']})")
+                    col_p1, col_p2 = st.columns([1, 2])
+                    
+                    with col_p1:
+                        assigned_group = st.selectbox(
+                            "1. تحديد المجموعة الصلاحية:", 
+                            ["OPS", "Sys 1", "Sys 2", "Admin"], 
+                            key=f"grp_{p_user['user_id']}"
+                        )
+                    
+                    with col_p2:
+                        st.markdown("**2. حدد الشاشات واللوحات المسموح إظهارها له:**")
+                        selected_pages = []
+                        for module in ALL_MODULES:
+                            if st.checkbox(module, value=True, key=f"p_{p_user['user_id']}_{module}"):
+                                selected_pages.append(module)
+                    
+                    if st.button(f"✅ اعتماد الحساب وتحديد الصلاحيات لـ {p_user['full_name']}", key=f"btn_act_{p_user['user_id']}"):
+                        p_user['role_group'] = assigned_group
+                        p_user['allowed_pages'] = selected_pages
+                        p_user['status'] = "Active"
+                        if p_user['user_id'] not in st.session_state['user_points']:
+                            st.session_state['user_points'][p_user['user_id']] = {"earned": 0, "deducted": 0, "notes": "حساب جديد"}
+                        st.success(f"🎉 تم تفعيل حساب {p_user['full_name']} وتخصيص {len(selected_pages)} شاشة مسموحة له بنجاح!")
+                        st.rerun()
+                    st.write("---")
+            else:
+                st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
+
+        # 1.2 تعديل الحسابات المفعلة والمجموعات وكلمات المرور والحذف
+        with tab_user_edit:
+            st.markdown("### 🛠️ إدارة الحسابات المفعلة (تعديل / حذف / إعادة ضبط المرور)")
+            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+            
+            user_options = {f"{u['full_name']} ({u['phone_number']}) - مجموعة: {u['role_group']}": u for u in active_users}
+            selected_u_label = st.selectbox("اختر الحساب المراد إدارته وتعديله:", list(user_options.keys()))
+            target_u = user_options[selected_u_label]
+
+            with st.form("edit_user_form"):
+                st.markdown(f"#### ✏️ تعديل بيانات الحساب: **{target_u['full_name']}**")
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                    edit_name = st.text_input("اسم المستخدم / الموظف:", value=target_u['full_name'])
+                    edit_phone = st.text_input("رقم الهاتف (اسم الدخول):", value=target_u['phone_number'])
+                    edit_pass = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
+                
+                with col_e2:
+                    edit_group = st.selectbox("المجموعة الصلاحية:", ["OPS", "Sys 1", "Sys 2", "Admin"], index=["OPS", "Sys 1", "Sys 2", "Admin"].index(target_u['role_group']) if target_u['role_group'] in ["OPS", "Sys 1", "Sys 2", "Admin"] else 0)
+                    st.markdown("**صلاحيات الشاشات واللوحات المسموحة:**")
+                    edit_pages = []
+                    for module in ALL_MODULES:
+                        is_checked = module in target_u.get('allowed_pages', ALL_MODULES)
+                        if st.checkbox(module, value=is_checked, key=f"edit_p_{target_u['user_id']}_{module}"):
+                            edit_pages.append(module)
+
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    save_u_btn = st.form_submit_button("💾 حفظ التعديلات")
+                with col_btn2:
+                    del_u_btn = st.form_submit_button("🗑️ حذف وتجميد الحساب")
+
+                if save_u_btn:
+                    target_u['full_name'] = edit_name.strip()
+                    target_u['phone_number'] = edit_phone.strip()
+                    if edit_pass.strip() != "":
+                        target_u['password_hash'] = make_hashes(edit_pass.strip())
+                    target_u['role_group'] = edit_group
+                    target_u['allowed_pages'] = edit_pages
+                    st.success(f"✅ تم تحديث بيانات وصلاحيات الحساب ({edit_name}) بنجاح!")
+                    st.rerun()
+
+                if del_u_btn:
+                    if target_u['user_id'] == MAIN_ADMIN['user_id']:
+                        st.error("❌ لا يمكن حذف الحساب الرئيسي للمدير (Mohamed Salem).")
+                    else:
+                        target_u['status'] = "Disabled"
+                        st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
+                        st.rerun()
+
+        # 1.3 صندوق البريد وتتبع المراسلات والواتساب لكل مستخدم
+        with tab_audit:
+            st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
+            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+            aud_user_options = {f"{u['full_name']} ({u['phone_number']})": u for u in active_users}
+            selected_aud_label = st.selectbox("اختر المستخدم لعرض سجله الخاص:", list(aud_user_options.keys()))
+            aud_u = aud_user_options[selected_aud_label]
+
+            col_aud1, col_aud2 = st.columns(2)
+
+            with col_aud1:
+                st.markdown(f"#### 📬 صندوق البريد والرسائل الداخلية لـ ({aud_u['full_name']})")
+                user_msgs = [m for m in st.session_state['internal_messages'] if aud_u['full_name'] in m['sender'] or aud_u['full_name'] in m['recipient']]
+                if user_msgs:
+                    for m in user_msgs:
+                        st.markdown(f"""
+                        <div class="chat-bubble-in">
+                            <strong>من: {m['sender']} ➔ إلى: {m.get('recipient', 'الجميع')}</strong><br>
+                            <span>{m['text']}</span><br>
+                            <small style='color:#64748b;'>📅 {m['time']}</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("لا توجد رسائل داخلية مسجلة لهذا المستخدم.")
+
+            with col_aud2:
+                st.markdown(f"#### 📱 الأرقام والمراسلات الخارجية عبر (WhatsApp) لـ ({aud_u['full_name']})")
+                user_wa = [w for w in st.session_state['whatsapp_logs'] if aud_u['full_name'] in w['sender']]
+                if user_wa:
+                    for w in user_wa:
+                        st.markdown(f"""
+                        <div class="chat-bubble-in" style="border-right: 6px solid #16a34a;">
+                            <strong>المستلم: {w['target_name']} (+{w['phone']})</strong><br>
+                            <span>{w['text']}</span><br>
+                            <small style='color:#64748b;'>📅 {w['time']}</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("لا توجد مراسلات واتساب مسجلة لهذا المستخدم.")
+
+        # 1.4 قسم تقييمات الموظفين والتحكم بالنقاط المكتسبة والضائعة والتحليل العام
+        with tab_points_eval:
+            st.markdown("### 🏆 التحكم بنقاط تقييم الموظفين والتحليل العام للأداء")
+            
+            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+            eval_user_options = {f"{u['full_name']} ({u['role_group']})": u for u in active_users}
+            selected_eval_label = st.selectbox("اختر الموظف لإدارة نقاطه وتحليل أنائه:", list(eval_user_options.keys()))
+            eval_u = eval_user_options[selected_eval_label]
+
+            u_p_data = st.session_state['user_points'].get(eval_u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
+
+            col_p_act1, col_p_act2 = st.columns([2, 3])
+
+            with col_p_act1:
+                st.markdown(f"#### ✏️ تعديل النقاط يدويًا لـ **{eval_u['full_name']}**")
+                new_earned = st.number_input("النقاط المكتسبة (+1):", min_value=0, value=u_p_data['earned'])
+                new_deducted = st.number_input("الخصومات والتأخيرات (-1):", min_value=0, value=u_p_data['deducted'])
+                p_notes = st.text_area("سبب تعديل التقييم / الملاحظات:", value=u_p_data['notes'], height=80)
+
+                if st.button("💾 حفظ تعديل النقاط والتقييم"):
+                    st.session_state['user_points'][eval_u['user_id']] = {
+                        "earned": new_earned,
+                        "deducted": new_deducted,
+                        "notes": p_notes.strip()
+                    }
+                    st.success("✅ تم تحديث التقييم والنقاط المكتسبة بنجاح!")
+                    st.rerun()
+
+            with col_p_act2:
+                st.markdown(f"#### 📊 التحليل العام والتقييم النهائي لـ **{eval_u['full_name']}**")
+                net_pts = new_earned - new_deducted
+                
+                m1, m2, m3 = st.columns(3)
+                m1.metric("➕ المكتسبة", f"{new_earned} نقطة")
+                m2.metric("➖ الخصومات", f"{new_deducted} نقطة")
+                m3.metric("🏆 صافي النقاط", f"{net_pts} نقطة")
+
+                # رسم بياني تحليلي
+                df_eval_chart = pd.DataFrame([
+                    {"مؤشر": "النقاط المكتسبة", "العدد": new_earned},
+                    {"مؤشر": "الخصومات والتأخير", "العدد": new_deducted}
+                ])
+                fig_eval = px.bar(df_eval_chart, x="مؤشر", y="العدد", color="مؤشر", text_auto=True, title=f"تحليل التقييم والتزام الموظف ({eval_u['full_name']})")
+                st.plotly_chart(fig_eval, use_container_width=True)
+
+        # 1.5 إعدادات SLA
+        with tab_sla_cfg:
+            st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
+            st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
+
+            sla_data = [
+                {"الحالة": "Under Operation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 4, "ساعات التأخير": 0},
+                {"الحالة": "Waiting BL", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 12, "أيام التأخير (Late Days)": 3, "ساعات التأخير": 0},
+                {"الحالة": "Draft", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"الحالة": "Waiting Confirmation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 5, "ساعات التأخير": 0},
+                {"الحالة": "Stamped", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"الحالة": "Ready to be invoiced", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"الحالة": "Closed", "أيام الفحص (Check Days)": 0, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 0, "ساعات التأخير": 0}
+            ]
+            
+            df_sla_edit = st.data_editor(pd.DataFrame(sla_data), use_container_width=True)
+            if st.button("💾 حفظ تعديلات مهل SLA السحابية"):
+                st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
+
+    # ---------------------------------------------------------
+    # التبويب 2: التحليلات الشاملة الـ 7
+    # ---------------------------------------------------------
+    elif choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
 
         df_shipments = pd.DataFrame(st.session_state['active_shipments'])
@@ -474,7 +688,7 @@ else:
             st.dataframe(filtered_df[filtered_df["company_name"] == sel_c], use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 2: إدارة الحالات والتعليق والملاحظات
+    # التبويب 3: إدارة الحالات
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
@@ -557,7 +771,7 @@ else:
                     st.warning("يرجى كتابة نص الملاحظة قبل الضغط على الزر.")
 
     # ---------------------------------------------------------
-    # التبويب 3: تفكيك السطر المرجعي الـ 11
+    # التبويب 4: تفكيك الـ 11
     # ---------------------------------------------------------
     elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
         st.subheader("📋 تفكيك السطر المرجعي وإدخال الشحنة (11 حقل)")
@@ -631,7 +845,7 @@ else:
                     st.success(f"🎉 تم حفظ الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 4: المراسلات والواتساب المباشر
+    # التبويب 5: المراسلات والواتساب
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("💬 المراسلات الداخلية والتكامل مع WhatsApp")
@@ -651,6 +865,7 @@ else:
                     if msg_body.strip() != "":
                         st.session_state['internal_messages'].append({
                             "sender": user['full_name'],
+                            "recipient": target_emp,
                             "text": msg_body.strip(),
                             "time": datetime.now().strftime('%H:%M %p')
                         })
@@ -664,8 +879,8 @@ else:
                 for msg in reversed(st.session_state['internal_messages']):
                     st.markdown(f"""
                     <div class="chat-bubble-in">
-                        <strong>رسالة من: {msg['sender']}</strong><br>
-                        <span style="color: #475569;">{msg['text']}</span><br>
+                        <strong>من: {msg['sender']} ➔ إلى: {msg.get('recipient', 'الجميع')}</strong><br>
+                        <span>{msg['text']}</span><br>
                         <small style="color: #94a3b8;">📅 {msg['time']}</small>
                     </div>
                     """, unsafe_allow_html=True)
@@ -696,23 +911,41 @@ else:
                     st.code(final_msg.strip(), language=None)
                 with col_b2:
                     st.info(f"📱 الرقم المعالج للإرسال: **+{clean_phone}**")
-                    st.link_button("🟢 فتح شات الرقم المباشر في WhatsApp", direct_wa_url, use_container_width=True)
+                    if st.link_button("🟢 فتح شات الرقم المباشر في WhatsApp", direct_wa_url, use_container_width=True):
+                        st.session_state['whatsapp_logs'].append({
+                            "sender": user['full_name'],
+                            "target_name": target_name,
+                            "phone": clean_phone,
+                            "text": final_msg.strip(),
+                            "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        })
 
     # ---------------------------------------------------------
-    # التبويب 5: تقارير التقييم والمكافآت
+    # التبويب 6: تقارير التقييم
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("📊 تقارير تقييم الأداء والمكافآت والتأخيرات")
 
         st.success("✅ قاعدة التقييم المعتمدة بالنظام: 1 نقطة لكل شحنة متوافقة ومكتملة.")
-        st.dataframe(pd.DataFrame([
-            {"المستخدم": "Mohamed Salem", "المجموعة": "Admin", "عدد الشحنات المنجزة": len(st.session_state['active_shipments']), "نقاط الإنجاز (+1)": len(st.session_state['active_shipments']), "نقاط التأخير (-1)": 0, "صافي التقييم": len(st.session_state['active_shipments'])},
-            {"المستخدم": "أحمد علي", "المجموعة": "OPS", "عدد الشحنات المنجزة": 8, "نقاط الإنجاز (+1)": 8, "نقاط التأخير (-1)": -1, "صافي التقييم": 7},
-            {"المستخدم": "محمود حسن", "المجموعة": "Sys 1", "عدد الشحنات المنجزة": 5, "نقاط الإنجاز (+1)": 5, "نقاط التأخير (-1)": 0, "صافي التقييم": 5}
-        ]), use_container_width=True)
+        
+        eval_rows = []
+        for u in st.session_state['registered_users']:
+            if u['status'] == "Active":
+                pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
+                net = pts['earned'] - pts['deducted']
+                eval_rows.append({
+                    "المستخدم": u['full_name'],
+                    "المجموعة": u['role_group'],
+                    "النقاط المكتسبة (+1)": pts['earned'],
+                    "الخصومات والتأخير (-1)": pts['deducted'],
+                    "صافي التقييم النهائي": net,
+                    "ملاحظات التقييم": pts['notes']
+                })
+        
+        st.dataframe(pd.DataFrame(eval_rows), use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 6: سجل الحالات
+    # التبويب 7: سجل الحالات
     # ---------------------------------------------------------
     elif choice == "📋 سجل الحالات والتدقيق (Status Logs)":
         st.subheader("📋 سجل الحالات والتدقيق التاريخي (Status Logs & Audit Trail)")
@@ -721,68 +954,3 @@ else:
             {"#": 2, "الشحنة": "260862116", "الحالة السابقة": "Under Operation", "الحالة الجديدة": "Waiting BL", "التاريخ والوقت": "2026-09-18 11:30:00"},
             {"#": 3, "الشحنة": "260862117", "الحالة السابقة": "Stamped", "الحالة الجديدة": "Ready to be invoiced", "التاريخ والوقت": "2026-09-18 12:15:00"}
         ]), use_container_width=True)
-
-    # ---------------------------------------------------------
-    # التبويب 7: لوحة التحكم الإدارية (تحديد الصلاحيات والمجموعات الحصري)
-    # ---------------------------------------------------------
-    elif choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
-        st.subheader("⚙️ لوحة تحكم المدير وتحديد المجموعات وصلاحيات الشاشات (Mohamed Salem Control Panel)")
-
-        tab_users_act, tab_sla_cfg = st.tabs(["👥 اعتماد وتحديد صلاحيات الحسابات", "⏱️ إعدادات المهل SLA"])
-
-        with tab_users_act:
-            st.markdown("### 👥 طلبات الحسابات بانتظار الاعتماد وتحديد الصلاحيات")
-            pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
-            
-            if len(pending_list) > 0:
-                for p_user in pending_list:
-                    st.markdown(f"#### 👤 المستدعي: **{p_user['full_name']}** ({p_user['phone_number']})")
-                    col_p1, col_p2 = st.columns([1, 2])
-                    
-                    with col_p1:
-                        assigned_group = st.selectbox(
-                            "1. تحديد المجموعة الصلاحية:", 
-                            ["OPS", "Sys 1", "Sys 2", "Admin"], 
-                            key=f"grp_{p_user['user_id']}"
-                        )
-                    
-                    with col_p2:
-                        st.markdown("**2. حدد الشاشات واللوحات المسموح إظهارها له:**")
-                        selected_pages = []
-                        for module in ALL_MODULES:
-                            if st.checkbox(module, value=True, key=f"p_{p_user['user_id']}_{module}"):
-                                selected_pages.append(module)
-                    
-                    if st.button(f"✅ اعتماد الحساب وتحديد الصلاحيات لـ {p_user['full_name']}", key=f"btn_act_{p_user['user_id']}"):
-                        p_user['role_group'] = assigned_group
-                        p_user['allowed_pages'] = selected_pages
-                        p_user['status'] = "Active"
-                        st.success(f"🎉 تم تفعيل حساب {p_user['full_name']} وتخصيص {len(selected_pages)} شاشة مسموحة له بنجاح!")
-                        st.rerun()
-                    st.write("---")
-            else:
-                st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
-
-            st.write("---")
-            st.markdown("### 📋 قائمة الحسابات المفعلة والصلاحيات")
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
-            for au in active_users:
-                st.write(f"• **{au['full_name']}** | الهاتف: `{au['phone_number']}` | المجموعة: **{au['role_group']}** | عدد الشاشات المسموحة: **{len(au.get('allowed_pages', ALL_MODULES))}**")
-
-        with tab_sla_cfg:
-            st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
-            st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
-
-            sla_data = [
-                {"الحالة": "Under Operation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 4, "ساعات التأخير": 0},
-                {"الحالة": "Waiting BL", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 12, "أيام التأخير (Late Days)": 3, "ساعات التأخير": 0},
-                {"الحالة": "Draft", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Waiting Confirmation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 5, "ساعات التأخير": 0},
-                {"الحالة": "Stamped", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Ready to be invoiced", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Closed", "أيام الفحص (Check Days)": 0, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 0, "ساعات التأخير": 0}
-            ]
-            
-            df_sla_edit = st.data_editor(pd.DataFrame(sla_data), use_container_width=True)
-            if st.button("💾 حفظ تعديلات مهل SLA السحابية"):
-                st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
