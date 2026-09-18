@@ -407,644 +407,61 @@ else:
 
     choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
+# ---------------------------------------------------------
+    # التبويب 1: لوحة التحكم الإدارية (Admin Panel) - المسترجعة والمؤمنة
     # ---------------------------------------------------------
-    # التبويب 1: لوحة التحكم الإدارية (Admin Panel)
-    # ---------------------------------------------------------
-    if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
-        st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
-
-        tab_users_act, tab_user_edit, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
-            "👥 طلبات الحسابات بانتظار الاعتماد",
-            "🛠️ إعدادات الحسابات المفعلة والصلاحيات",
-            "📨 صندوق البريد وتتبع الواتساب الخارجي",
-            "🏆 تقييم الموظفين والتحكم بالنقاط",
-            "⏱️ إعدادات المهل SLA"
-        ])
-
-        with tab_users_act:
-            st.markdown("### 👥 طلبات الحسابات بانتظار الاعتماد وتحديد الصلاحيات")
-            pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
+    elif choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
+        if user['role_group'] != "Admin":
+            st.error("🚫 هذه الصفحة مخصصة لمدير النظام فقط.")
+        else:
+            st.subheader("⚙️ لوحة التحكم الإدارية (Admin Panel)")
             
-            if len(pending_list) > 0:
-                for p_user in pending_list:
-                    st.markdown(f"#### 👤 المستدعي: **{p_user['full_name']}** ({p_user['phone_number']})")
-                    col_p1, col_p2 = st.columns([1, 2])
-                    
-                    with col_p1:
-                        assigned_group = st.selectbox(
-                            "1. تحديد المجموعة الصلاحية:", 
-                            ["OPS", "Sys 1", "Sys 2", "Admin"], 
-                            key=f"grp_{p_user['user_id']}"
-                        )
-                    
-                    with col_p2:
-                        st.markdown("**2. حدد الشاشات واللوحات المسموح إظهارها له:**")
-                        selected_pages = []
-                        for module in ALL_MODULES:
-                            if st.checkbox(module, value=True, key=f"p_{p_user['user_id']}_{module}"):
-                                selected_pages.append(module)
-                    
-                    if st.button(f"✅ اعتماد الحساب وتحديد الصلاحيات لـ {p_user['full_name']}", key=f"btn_act_{p_user['user_id']}"):
-                        p_user['role_group'] = assigned_group
-                        p_user['allowed_pages'] = selected_pages
-                        p_user['status'] = "Active"
-                        if p_user['user_id'] not in st.session_state['user_points']:
-                            st.session_state['user_points'][p_user['user_id']] = {"earned": 0, "deducted": 0, "notes": "حساب جديد"}
-                        st.success(f"🎉 تم تفعيل حساب {p_user['full_name']} وتخصيص {len(selected_pages)} شاشة مسموحة له بنجاح!")
-                        st.rerun()
-                    st.write("---")
-            else:
-                st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
+            tab_u, tab_add = st.tabs(["👥 إدارة المستخدمين وصلاحيات الهيكل", "➕ إضافة مستخدم جديد"])
 
-        with tab_user_edit:
-            st.markdown("### 🛠️ إدارة الحسابات المفعلة (تعديل / حذف / إعادة ضبط المرور)")
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
-            
-            user_options = {f"{u['full_name']} ({u['phone_number']}) - مجموعة: {u['role_group']}": u for u in active_users}
-            selected_u_label = st.selectbox("اختر الحساب المراد إدارته وتعديله:", list(user_options.keys()))
-            target_u = user_options[selected_u_label]
-
-            with st.form("edit_user_form"):
-                st.markdown(f"#### ✏️ تعديل بيانات الحساب: **{target_u['full_name']}**")
-                col_e1, col_e2 = st.columns(2)
-                with col_e1:
-                    edit_name = st.text_input("اسم المستخدم / الموظف:", value=target_u['full_name'])
-                    edit_phone = st.text_input("رقم الهاتف (اسم الدخول):", value=target_u['phone_number'])
-                    edit_pass = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
+            with tab_u:
+                st.markdown("### 📋 قائمة المستخدمين المفعلين بالنظام")
+                users_data = []
+                for idx, u_item in enumerate(st.session_state['registered_users'], start=1):
+                    users_data.append({
+                        "#": idx,
+                        "اسم المستخدم": u_item['username'],
+                        "الاسم بالكامل": u_item['full_name'],
+                        "المجموعة الصلاحية": u_item['role_group'],
+                        "رقم الهاتف": u_item.get('phone_number', 'غير مسجل'),
+                        "حالة الحساب": "مفعل" if u_item['status'] == "Active" else "معطل"
+                    })
                 
-                with col_e2:
-                    st.markdown("**🖼️ إدارة صورة الموظف (رفع مباشر أو اعتماد الـ AI):**")
-                    
-                    # 1. رفع صورة مباشرة
-                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
-                    if uploaded_img:
-                        st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
-                        st.success("✅ تم تحميل وتحديث الصورة المرفوعة بنجاح!")
+                st.dataframe(pd.DataFrame(users_data), use_container_width=True)
 
-                    st.markdown("---")
-                    st.markdown("**2. توليد ومعاينة الصورة بالذكاء الاصطناعي (AI Studio Headshot):**")
-                    ai_prompt = st.text_input("وصف الصورة النصية المحدثة:", value=f"High quality formal professional headshot portrait of {selected_card_emp}, logistics business manager in a dark suit, studio lighting, neutral background, 4k ultra realistic", key=f"ai_p_{u_id}")
+            with tab_add:
+                st.markdown("### ➕ إضافة حساب مستخدم جديد")
+                with st.form("add_user_form_admin"):
+                    new_u_username = st.text_input("اسم المستخدم (Username):")
+                    new_u_fullname = st.text_input("الاسم الكامل:")
+                    new_u_phone = st.text_input("رقم الهاتف (مثال: 01212231815):", value="01212231815")
+                    new_u_role = st.selectbox("المجموعة الصلاحية:", ["Admin", "Management", "Operations", "Sales", "Customer Service"])
+                    new_u_pass = st.text_input("كلمة المرور:", type="password")
                     
-                    if st.button("✨ توليد صورة جديدة بالـ AI", key=f"btn_ai_gen_{u_id}"):
-                        st.session_state[f'ai_temp_photo_{u_id}'] = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop"
-                        st.info("🤖 تم توليد الصورة الذكية بنجاح! يمكنك معاينتها واعتمادها أدناه.")
-
-                    # إظهار معاينة الصورة المولدة وزر الاعتماد قبل الحفظ
-                    if f'ai_temp_photo_{u_id}' in st.session_state:
-                        st.markdown("##### 🔍 معاينة صورة الذكاء الاصطناعي المولدة:")
-                        st.image(st.session_state[f'ai_temp_photo_{u_id}'], width=180, caption="صورة AI مقترحة")
-                        
-                        if st.button("✅ اعتماد هذه الصورة للكارت", key=f"btn_confirm_ai_{u_id}"):
-                            st.session_state['user_photos'][u_id] = st.session_state[f'ai_temp_photo_{u_id}']
-                            st.success("🎉 تم اعتماد الصورة الذكية وتحديث كارت الموظف بها رسمياً!")
+                    submit_user = st.form_submit_button("إضافة المستخدم")
+                    if submit_user:
+                        if new_u_username and new_u_fullname and new_u_pass:
+                            new_id = max([u['user_id'] for u in st.session_state['registered_users']]) + 1
+                            st.session_state['registered_users'].append({
+                                "user_id": new_id,
+                                "username": new_u_username.strip(),
+                                "password": new_u_pass.strip(),
+                                "full_name": new_u_fullname.strip(),
+                                "role_group": new_u_role,
+                                "phone_number": new_u_phone.strip(),
+                                "status": "Active"
+                            })
+                            st.success(f"✅ تم إضافة المستخدم {new_u_fullname} بنجاح!")
                             st.rerun()
-                if del_u_btn:
-                    if target_u['user_id'] == MAIN_ADMIN['user_id']:
-                        st.error("❌ لا يمكن حذف الحساب الرئيسي للمدير (Mohamed Salem).")
-                    else:
-                        target_u['status'] = "Disabled"
-                        st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
-                        st.rerun()
-
-        with tab_audit:
-            st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
-            aud_user_options = {f"{u['full_name']} ({u['phone_number']})": u for u in active_users}
-            selected_aud_label = st.selectbox("اختر المستخدم لعرض سجله الخاص:", list(aud_user_options.keys()))
-            aud_u = aud_user_options[selected_aud_label]
-
-            col_aud1, col_aud2 = st.columns(2)
-
-            with col_aud1:
-                st.markdown(f"#### 📬 صندوق البريد والرسائل الداخلية لـ ({aud_u['full_name']})")
-                user_msgs = [m for m in st.session_state['internal_messages'] if aud_u['full_name'] in m.get('sender', '') or aud_u['full_name'] in m.get('recipient', '')]
-                if user_msgs:
-                    for m in user_msgs:
-                        st.markdown(f"""
-                        <div class="chat-bubble-in">
-                            <strong>من: {m.get('sender', 'غير معروف')} ➔ إلى: {m.get('recipient', 'الجميع')}</strong><br>
-                            <span>{m.get('text', '')}</span><br>
-                            <small style='color:#64748b;'>📅 {m.get('time', '')}</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد رسائل داخلية مسجلة لهذا المستخدم.")
-
-            with col_aud2:
-                st.markdown(f"#### 📱 الأرقام والمراسلات الخارجية عبر (WhatsApp) لـ ({aud_u['full_name']})")
-                user_wa = [w for w in st.session_state['whatsapp_logs'] if aud_u['full_name'] in w.get('sender', '')]
-                if user_wa:
-                    for w in user_wa:
-                        st.markdown(f"""
-                        <div class="chat-bubble-in" style="border-right: 6px solid #16a34a;">
-                            <strong>المستلم: {w.get('target_name', 'غير معروف')} (+{w.get('phone', '')})</strong><br>
-                            <span>{w.get('text', '')}</span><br>
-                            <small style='color:#64748b;'>📅 {w.get('time', '')}</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد مراسلات واتساب مسجلة لهذا المستخدم.")
-
-        with tab_points_eval:
-            st.markdown("### 🏆 التحكم بنقاط تقييم الموظفين والتحليل العام للأداء")
-            
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
-            eval_user_options = {f"{u['full_name']} ({u['role_group']})": u for u in active_users}
-            selected_eval_label = st.selectbox("اختر الموظف لإدارة نقاطه وتحليل أنائه:", list(eval_user_options.keys()))
-            eval_u = eval_user_options[selected_eval_label]
-
-            u_p_data = st.session_state['user_points'].get(eval_u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
-
-            col_p_act1, col_p_act2 = st.columns([2, 3])
-
-            with col_p_act1:
-                st.markdown(f"#### ✏️ تعديل النقاط يدويًا لـ **{eval_u['full_name']}**")
-                new_earned = st.number_input("النقاط المكتسبة (+1 عند غلق الملف):", min_value=0, value=u_p_data['earned'])
-                new_deducted = st.number_input("الخصومات والتأخيرات (-1):", min_value=0, value=u_p_data['deducted'])
-                p_notes = st.text_area("سبب تعديل التقييم / الملاحظات:", value=u_p_data['notes'], height=80)
-
-                if st.button("💾 حفظ تعديل النقاط والتقييم"):
-                    st.session_state['user_points'][eval_u['user_id']] = {
-                        "earned": new_earned,
-                        "deducted": new_deducted,
-                        "notes": p_notes.strip()
-                    }
-                    st.success("✅ تم تحديث التقييم والنقاط المكتسبة بنجاح!")
-                    st.rerun()
-
-            with col_p_act2:
-                st.markdown(f"#### 📊 التحليل العام والتقييم النهائي لـ **{eval_u['full_name']}**")
-                net_pts = new_earned - new_deducted
-                
-                m1, m2, m3 = st.columns(3)
-                m1.metric("➕ المكتسبة", f"{new_earned} نقطة")
-                m2.metric("➖ الخصومات", f"{new_deducted} نقطة")
-                m3.metric("🏆 صافي النقاط", f"{net_pts} نقطة")
-
-                df_eval_chart = pd.DataFrame([
-                    {"مؤشر": "النقاط المكتسبة", "العدد": new_earned},
-                    {"مؤشر": "الخصومات والتأخير", "العدد": new_deducted}
-                ])
-                fig_eval = px.bar(df_eval_chart, x="مؤشر", y="العدد", color="مؤشر", text_auto=True, title=f"تحليل التقييم والتزام الموظف ({eval_u['full_name']})")
-                st.plotly_chart(fig_eval, use_container_width=True)
-
-        with tab_sla_cfg:
-            st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
-            st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
-
-            sla_data = [
-                {"الحالة": "Under Operation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 4, "ساعات التأخير": 0},
-                {"الحالة": "Waiting BL", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 12, "أيام التأخير (Late Days)": 3, "ساعات التأخير": 0},
-                {"الحالة": "Draft", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Waiting Confirmation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 5, "ساعات التأخير": 0},
-                {"الحالة": "Stamped", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Ready to be invoiced", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Closed", "أيام الفحص (Check Days)": 0, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 0, "ساعات التأخير": 0}
-            ]
-            
-            df_sla_edit = st.data_editor(pd.DataFrame(sla_data), use_container_width=True)
-            if st.button("💾 حفظ تعديلات مهل SLA السحابية"):
-                st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
+                        else:
+                            st.warning("يرجى تعبئة كافة الحقول المطلوبة.")
 
     # ---------------------------------------------------------
-    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة
-    # ---------------------------------------------------------
-    elif choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
-        st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
-
-        df_shipments = pd.DataFrame(st.session_state['active_shipments'])
-        df_shipments.rename(columns={
-            "id": "shipment_id", "file_num": "file_number", "company": "company_name",
-            "inv": "invoice_number", "status": "current_status", "holded": "is_holded",
-            "last_up": "last_updated_at", "last_status_updater": "full_name"
-        }, inplace=True)
-
-        df_shipments['sla_status'] = df_shipments.apply(lambda row: calculate_sla_status(row["current_status"], row["last_updated_at"])[0], axis=1)
-
-        st.markdown("#### 🔍 لوحة تصفية وبحث محددات التحليل")
-        col_f1, col_f2 = st.columns(2)
-
-        with col_f1:
-            all_employees = ["كل الموظفين (الشامل)"] + sorted(list(df_shipments["full_name"].dropna().unique()))
-            selected_emp = st.selectbox("👤 اختر الموظف المحدد (صاحب آخر تحديث للحالة):", all_employees)
-
-        with col_f2:
-            all_companies = ["كل العملاء (الكل)"] + sorted(list(df_shipments["company_name"].dropna().unique()))
-            selected_comp = st.selectbox("🏢 اختر الشركة / العميل المحدد للبحث والتصفية:", all_companies)
-
-        filtered_df = df_shipments.copy()
-        if selected_emp != "كل الموظفين (الشامل)":
-            filtered_df = filtered_df[filtered_df["full_name"] == selected_emp]
-        if selected_comp != "كل العملاء (الكل)":
-            filtered_df = filtered_df[filtered_df["company_name"] == selected_comp]
-
-        st.write("---")
-
-        analysis_options = [
-            "📊 تقييم أداء الشحنات بالحالات والأسماء",
-            "🏢 تقييم ومتابعة أداء العملاء والتأخيرات",
-            "🔄 نسبة الشحنات بالحالات التشغيلية",
-            "🎯 أسباب وعنق التكظز (Bottleneck Analysis)",
-            "⏱️ تحليل الالتزام بالمهل الزمنية (SLA Breakdown)",
-            "📂 كشف واستعلام ملفات العملاء التفصيلي"
-        ]
-        selected_analysis = st.selectbox("💡 اختر نوع التحليل المطلوب إظهاره:", analysis_options)
-
-        st.write("---")
-
-        if selected_analysis == "📊 تقييم أداء الشحنات بالحالات والأسماء":
-            st.markdown(f"### 📊 توزيع شحنات الحالات متبوعة بأسماء الموظفين المحدثين")
-            
-            if selected_emp == "كل الموظفين (الشامل)":
-                status_emp_summary = filtered_df.groupby(["current_status", "full_name"]).size().reset_index(name="عدد_الشحنات")
-                fig_stacked = px.bar(
-                    status_emp_summary, 
-                    x="current_status", 
-                    y="عدد_الشحنات", 
-                    color="full_name", 
-                    title="توزيع الحالات التشغيلية مقسمة بأسماء الموظفين القائمين بالتحديث", 
-                    text_auto=True,
-                    barmode="stack"
-                )
-                st.plotly_chart(fig_stacked, use_container_width=True)
-            else:
-                fig_single = px.bar(
-                    filtered_df["current_status"].value_counts().reset_index(), 
-                    x="current_status", 
-                    y="count", 
-                    color="current_status", 
-                    title=f"توزيع شحنات الموظف ({selected_emp}) حسب الحالات", 
-                    text_auto=True
-                )
-                st.plotly_chart(fig_single, use_container_width=True)
-
-        elif selected_analysis == "🏢 تقييم ومتابعة أداء العملاء والتأخيرات":
-            st.markdown("### 🏢 تقييم أداء العملاء وتفاصيل التأخيرات للمتابعة الفورية")
-            
-            comp_eval = filtered_df.groupby("company_name").agg(
-                إجمالي_الشحنات=('shipment_id', 'count'),
-                المكتملة_Closed=('current_status', lambda x: (x == 'Closed').sum()),
-                المتأخرة_Late=('sla_status', lambda x: (x == 'متأخر (Late)').sum()),
-                المعلقة_Hold=('is_holded', 'sum')
-            ).reset_index()
-
-            st.dataframe(comp_eval, use_container_width=True)
-
-            late_shipments = filtered_df[filtered_df['sla_status'] == 'متأخر (Late)']
-            st.markdown("#### 🚨 كشف وصف الشحنات المتأخرة لمباشرة إجراءات المتابعة:")
-            if not late_shipments.empty:
-                st.dataframe(late_shipments[[
-                    "file_number", "company_name", "current_status", 
-                    "full_name", "last_updated_at", "h_reason"
-                ]].rename(columns={
-                    "file_number": "رقم الملف",
-                    "company_name": "الشركة / العميل",
-                    "current_status": "الحالة المتأخرة الحالية",
-                    "full_name": "الموظف المحدث للحالة",
-                    "last_updated_at": "تاريخ آخر تحديث حالة",
-                    "h_reason": "سبب التعليق إن وجد"
-                }), use_container_width=True)
-            else:
-                st.success("✅ لا توجد شحنات متأخرة حالياً لكافة العملاء المحددين.")
-
-        elif selected_analysis == "🔄 نسبة الشحنات بالحالات التشغيلية":
-            st.markdown("### 🔄 نسبة توزيع الشحنات على الحالات الـ 8")
-            fig_pie = px.pie(filtered_df, names="current_status", hole=0.35, title="نسب توزيع الشحنات بالحالات التشغيلية")
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        elif selected_analysis == "🎯 أسباب وعنق التكظز (Bottleneck Analysis)":
-            st.markdown("### 🎯 الحالة الأكثر تكراراً وتسبباً للتكدس")
-            most_common = filtered_df["current_status"].mode()
-            if not most_common.empty:
-                st.warning(f"⚠️ الحالة الأكثر تكراراً هي: **{most_common[0]}** (تكررت {len(filtered_df[filtered_df['current_status'] == most_common[0]])} مرة)")
-
-        elif selected_analysis == "⏱️ تحليل الالتزام بالمهل الزمنية (SLA Breakdown)":
-            st.markdown("### ⏱️ تحليل SLA والالتزام بالتوقيتات")
-            fig_sla = px.pie(filtered_df, names="sla_status", hole=0.4, title="مؤشرات الالتزام بالمهل الزمني")
-            st.plotly_chart(fig_sla, use_container_width=True)
-
-        elif selected_analysis == "📂 كشف واستعلام ملفات العملاء التفصيلي":
-            st.markdown("### 📂 كشف الملفات المجمعة للعملاء المحددين")
-            st.dataframe(filtered_df, use_container_width=True)
-
-    # ---------------------------------------------------------
-    # التبويب 3: إدارة الحالات والتتبع
-    # ---------------------------------------------------------
-    elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
-        st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
-
-        rows = st.session_state['active_shipments']
-
-        shipment_list = []
-        for r in rows:
-            sla_label, sla_class, elapsed_h = calculate_sla_status(r['status'], r['last_up'])
-            
-            shipment_list.append({
-                'رقم الملف': r['file_num'],
-                'الشركة': r['company'],
-                'رقم الحجز': r['bkg'],
-                'رقم الفاتورة': r['inv'],
-                'الحالة الحالية': f"⏸️ معلقة (Hold)" if r['holded'] else r['status'],
-                'وضع SLA': sla_label,
-                'الساعات المنقضية': f"{elapsed_h:.1f} ساعة",
-                'الموظف المحدث للحالة': r.get('last_status_updater', 'غير محدد'),
-                'آخر تحديث حالة': str(r['last_up']),
-                'الملاحظة الحالية': r.get('note', '')
-            })
-
-        df = pd.DataFrame(shipment_list)
-        st.markdown("#### 📋 جدول الشحنات النشطة ومؤشرات الالتزام")
-        st.dataframe(df, use_container_width=True)
-
-        st.write("---")
-        st.markdown("### 🛠️ تحديث الحالة وإضافة الملاحظة")
-
-        shipment_map = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r['id'] for r in rows}
-        shipment_labels = list(shipment_map.keys())
-
-        default_idx = 0
-        if st.session_state['selected_shipment_id']:
-            for idx, label in enumerate(shipment_labels):
-                if shipment_map[label] == st.session_state['selected_shipment_id']:
-                    default_idx = idx
-                    break
-
-        selected_label = st.selectbox("اختر الشحنة:", shipment_labels, index=default_idx)
-        selected_id = shipment_map[selected_label]
-        st.session_state['selected_shipment_id'] = selected_id
-
-        s_data = next((item for item in rows if item['id'] == selected_id), None)
-
-        if s_data:
-            col_status_change, col_notes = st.columns([2, 2])
-
-            with col_status_change:
-                st.markdown("**تغيير الحالة**")
-                all_statuses = [
-                    'Under Operation', 'Waiting BL', 'Draft', 
-                    'Waiting Confirmation', 'Stamped', 
-                    'Ready to be invoiced', 'Closed'
-                ]
-                
-                curr_st = s_data['status']
-                new_selected_status = st.selectbox("الحالة الجديدة:", all_statuses, index=all_statuses.index(curr_st) if curr_st in all_statuses else 0)
-                set_hold = st.checkbox("تفعيل تعليق الشحنة (Put on Hold)", value=bool(s_data['holded']))
-                hold_reason_text = ""
-                if set_hold:
-                    hold_reason_text = st.text_input("سبب التعليق:", value=s_data['h_reason'] if s_data['h_reason'] else "")
-
-                save_clicked = st.button("💾 حفظ التعديل", key="save_status_btn")
-                
-                if save_clicked:
-                    if set_hold and hold_reason_text.strip() == "":
-                        st.error("⚠️ يرجى كتابة سبب التعليق عند تفعيل خيار Hold.")
-                    else:
-                        was_not_closed = (s_data['status'] != 'Closed')
-                        
-                        s_data['status'] = new_selected_status
-                        s_data['holded'] = 1 if set_hold else 0
-                        s_data['h_reason'] = hold_reason_text.strip() if set_hold else ""
-                        s_data['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        s_data['last_status_updater'] = user['full_name']
-
-                        if new_selected_status == 'Closed' and was_not_closed:
-                            u_pts = st.session_state['user_points'].get(user['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
-                            u_pts['earned'] += 1
-                            u_pts['notes'] = f"إغلاق الملف رقم {s_data['file_num']}"
-                            st.session_state['user_points'][user['user_id']] = u_pts
-
-                        update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
-                        execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
-
-                        st.success(f"✅ تم حفظ تعديل حالة الملف ({s_data['file_num']}) بنجاح!")
-                        st.rerun()
-
-            with col_notes:
-                st.markdown("**ملاحظة**")
-                new_note = st.text_area("الملاحظة التوضيحية:", height=110, value="")
-                if st.button("📝 إضافة الملاحظة", key="add_note_btn"):
-                    if new_note.strip() != "":
-                        s_data['note'] = new_note.strip()
-                        note_sql = "INSERT INTO shipment_notes (shipment_id, added_by_user, note_content) VALUES (?, ?, ?)"
-                        execute_query(note_sql, (s_data['id'], user['user_id'], new_note.strip()))
-                        st.success("✅ تم حفظ الملاحظة بنجاح.")
-                        st.rerun()
-                    else:
-                        st.warning("يرجى كتابة نص الملاحظة قبل الحفظ.")
-
-    # ---------------------------------------------------------
-    # التبويب 4: اضف الشحنة (المحدث باسم الزر الجديد)
-    # ---------------------------------------------------------
-    elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
-        st.subheader("اضف الشحنة")
-        
-        input_type = st.radio("اختر طريقة الإدخال:", ["اضف العنوان", "إدخال يدوي مباشر"], horizontal=True)
-
-        parsed = {
-            'po_number': '', 'file_number': '', 'container_count': 1,
-            'container_type': '40HC', 'pol': '', 'pod': '',
-            'destination_country': '', 'invoice_number': '',
-            'company_name': '', 'booking_number': '', 'item_description': ''
-        }
-
-        if input_type == "اضف العنوان":
-            raw_ref_str = st.text_area("ألصق العنوان", height=80, value="")
-            
-            # تم تحديث المسمى هنا إلى "اضف العنوان" بناءً على طلبك بالصورة المرفقة
-            if st.button("اضف العنوان"):
-                if raw_ref_str.strip() != "":
-                    data, success = parse_reference_string(raw_ref_str)
-                    if success:
-                        st.session_state['parsed_data'] = data
-                        st.success("✅ تم تفكيك العنوان وتعبئة الحقول بنجاح!")
-                    else:
-                        st.error("⚠️ لم نتمكن من تفكيك النص بالكامل.")
-                else:
-                    st.warning("يرجى إلصاق العنوان أولاً.")
-
-        if 'parsed_data' in st.session_state and input_type == "اضف العنوان":
-            parsed = st.session_state['parsed_data']
-
-        st.write("---")
-        with st.form("shipment_entry_form", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                po_num = st.text_input("PO Number", value=parsed['po_number'])
-                file_num = st.text_input("رقم الملف (File Number) *", value=parsed['file_number'])
-                cont_count = st.number_input("عدد الحاويات", min_value=1, value=parsed['container_count'])
-                cont_type = st.text_input("نوع الحاوية", value=parsed['container_type'])
-            
-            with c2:
-                pol_val = st.text_input("ميناء الشحن (POL)", value=parsed['pol'])
-                pod_val = st.text_input("ميناء الوصول (POD)", value=parsed['pod'])
-                dest_country = st.text_input("الوجهة النهائية", value=parsed['destination_country'])
-                inv_num = st.text_input("رقم الفاتورة", value=parsed['invoice_number'])
-
-            with c3:
-                company = st.text_input("اسم الشركة (Company Name) *", value=parsed['company_name'])
-                bkg_num = st.text_input("رقم الحجز (Booking Number)", value=parsed['booking_number'])
-                item_desc = st.text_area("وصف البضاعة", value=parsed['item_description'], height=100)
-
-            submit_btn = st.form_submit_button("اضف الشحنة")
-
-            if submit_btn:
-                if file_num.strip() == "" or company.strip() == "":
-                    st.error("❌ رقم الملف واسم الشركة حقول إجبارية.")
-                else:
-                    new_item = {
-                        "id": len(st.session_state['active_shipments']) + 1,
-                        "file_num": file_num,
-                        "company": company,
-                        "bkg": bkg_num,
-                        "inv": inv_num,
-                        "status": "Under Operation",
-                        "holded": 0,
-                        "h_reason": "",
-                        "last_up": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        "last_status_updater": user['full_name'],
-                        "note": ""
-                    }
-                    st.session_state['active_shipments'].append(new_item)
-                    st.success(f"🎉 تم إضافة الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
-
-# ---------------------------------------------------------
-    # التبويب 5: المراسلات والواتساب المحدث
-    # ---------------------------------------------------------
-    elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
-        st.subheader("المراسالات")
-
-        tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "WhatsApp"])
-
-        with tab_msg:
-            col_send, col_inbox = st.columns([2, 3])
-            with col_send:
-                st.markdown("### 📤 إرسال رسالة داخلية")
-                
-                # قائمة الموظفين المفعلين
-                active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
-                emp_map = {f"{u['full_name']} ({u['role_group']})": u for u in active_users_list}
-                target_emp_label = st.selectbox("إلى المستخدم / الفريق:", list(emp_map.keys()))
-                target_emp_obj = emp_map[target_emp_label]
-
-                # الاختيار بين رسالة عادية أو تنبيه لشحنة
-                msg_type = st.radio("نوع الرسالة الداخلية:", ["رسالة عادية", "تنبيه/تحديث لشحنة محددة"], horizontal=True)
-
-                if msg_type == "تنبيه/تحديث لشحنة محددة":
-                    rows = st.session_state['active_shipments']
-                    ship_map = {f"ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
-                    selected_s_label = st.selectbox("اختر الشحنة المراد التنبيه عليها:", list(ship_map.keys()))
-                    selected_s = ship_map[selected_s_label]
-
-                    dynamic_body = (
-                        f"مرحباً أستاذ/ة {target_emp_obj['full_name']}\n\n"
-                        f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
-                        f"📂 رقم الملف: {selected_s['file_num']}\n"
-                        f"🔖 اسم الشركة: {selected_s['company']}\n"
-                        f"🧾 رقم الفاتورة: {selected_s['inv']}\n"
-                        f"📌 الحالة الحالية: {selected_s['status']}"
-                    )
-                    user_editable_text = st.text_area("نص التحديث التوضيحي (إن وجد):", value=dynamic_body, height=160)
-                else:
-                    user_editable_text = st.text_area("نص الرسالة الداخلية:", height=120)
-
-                # الخاتمة الثابتة غير القابلة للتعديل
-                fixed_footer = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
-                st.info(f"🔒 الخاتمة الملحقة بالرسالة تلقائياً:\n\n{fixed_footer}")
-
-                if st.button("🚀 إرسال الرسالة الداخلية"):
-                    if user_editable_text.strip() != "":
-                        full_final_msg = f"{user_editable_text.strip()}\n\n{fixed_footer}"
-                        st.session_state['internal_messages'].append({
-                            "sender": user['full_name'],
-                            "recipient": target_emp_label,
-                            "text": full_final_msg,
-                            "time": datetime.now().strftime('%H:%M %p')
-                        })
-                        st.success("✅ تم إرسال الرسالة الداخلية وتوثيقها بنجاح!")
-                        st.rerun()
-                    else:
-                        st.warning("يرجى كتابة نص الرسالة أولاً.")
-
-            with col_inbox:
-                st.markdown("### 📥 صندوق الرسائل الواردة")
-                for msg in reversed(st.session_state['internal_messages']):
-                    st.markdown(f"""
-                    <div class="chat-bubble-in">
-                        <strong>من: {msg.get('sender', 'غير معروف')} ➔ إلى: {msg.get('recipient', 'الجميع')}</strong><br>
-                        <span>{msg.get('text', '')}</span><br>
-                        <small style="color: #94a3b8;">📅 {msg.get('time', '')}</small>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        with tab_wa:
-            st.markdown("### WhatsApp")
-            
-            # 1. تحديد نوع المستلم (الموظف هو الخيار الافتراضي)
-            recipient_type = st.radio("تحديد نوع المستلم:", ["مستخدم/موظف بالبرنامج", "العميل"], horizontal=True)
-
-            # 2. اختيار الشحنة المراد مراسلتها
-            rows = st.session_state['active_shipments']
-            shipment_options = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r for r in rows}
-            selected_ship_label = st.selectbox("اختر الشحنة المُراد المراسلة بشأنها:", list(shipment_options.keys()))
-            selected_ship = shipment_options[selected_ship_label]
-
-            col_wa1, col_wa2 = st.columns(2)
-
-            if recipient_type == "العميل":
-                with col_wa1:
-                    target_name = st.text_input("اسم العميل / الشركة:", value=f"شركة {selected_ship['company']}")
-                    target_phone = st.text_input("رقم الهاتف", value="01212231815")
-                
-                header_greeting = f"مرحباً أستاذ/ة (عناية {target_name})"
-            else:
-                active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
-                emp_map = {f"{u['full_name']} ({u['phone_number']})": u for u in active_users_list}
-                
-                with col_wa1:
-                    selected_emp_wa = st.selectbox("اختر الموظف المستلم:", list(emp_map.keys()))
-                    target_u_obj = emp_map[selected_emp_wa]
-                    target_name = target_u_obj['full_name']
-                    target_phone = target_u_obj['phone_number']
-                    st.info(f"📱 رقم الهاتف المسجل بالنظام لـ ({target_name}): **{target_phone}**")
-
-                header_greeting = f"مرحباً أستاذ/ة {target_name}"
-
-            # القالب الموحد
-            wa_template = (
-                f"{header_greeting}\n\n"
-                f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
-                f"📂 رقم الملف: {selected_ship['file_num']}\n"
-                f"🔖 اسم الشركة: {selected_ship['company']}\n"
-                f"🧾 رقم الفاتورة: {selected_ship['inv']}\n"
-                f"📌 الحالة الحالية: {selected_ship['status']}\n\n"
-                f"يرجى اتخاذ اللازم إنهاء الإجراء\n"
-                f"تحياتنا، فريق U.S.C للتشغيل\n"
-                f"M.Salem"
-            )
-
-            with col_wa2:
-                final_msg = st.text_area("نص الرسالة المعاينة قبل الإرسال:", value=wa_template, height=220)
-
-            if target_phone.strip() != "":
-                clean_phone = format_whatsapp_phone(target_phone)
-                encoded_msg = urllib.parse.quote(final_msg.strip())
-                direct_wa_url = f"https://wa.me/{clean_phone}?text={encoded_msg}"
-
-                col_b1, col_b2 = st.columns(2)
-                with col_b1:
-                    st.info(f"رقم المراسلة: **+{clean_phone}**")
-                with col_b2:
-                    if st.link_button("ارسال WhatsApp", direct_wa_url, use_container_width=True):
-                        st.session_state['whatsapp_logs'].append({
-                            "sender": user['full_name'],
-                            "target_name": target_name,
-                            "phone": clean_phone,
-                            "text": final_msg.strip(),
-                            "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        })
-
-# ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور بـ الكارت المزدوج ومولد الصور بالـ AI
+    # التبويب 6: تقييم الأداء والبطاقة المعتمدة بالكامل (Performance & Bonus)
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1155,11 +572,8 @@ else:
 
         if card_user_data:
             u_id = card_user_data['user_id']
-            
-            if f'show_preview_{u_id}' not in st.session_state:
-                st.session_state[f'show_preview_{u_id}'] = False
 
-            # لوحة تعديل النقاط والملاحظات والصورة بالـ AI
+            # لوحة تعديل النقاط والملاحظات والصورة
             with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
@@ -1168,34 +582,28 @@ else:
                     edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
                 with col_e2:
-                    st.markdown("**🖼️ إدارة صورة الموظف (رفع مباشر أو عبر AI):**")
-                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    st.markdown("**🖼️ إدارة صورة الموظف:**")
+                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                     if uploaded_img:
                         st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
 
                     st.markdown("---")
-                    st.markdown("**2. توليد صورة شخصية بالذكاء الاصطناعي (AI Headshot Generator):**")
-                    ai_prompt = st.text_input("وصف صورة الذكاء الاصطناعي:", value=f"Professional headshot portrait of {selected_card_emp}, formal suit, office environment", key=f"ai_prompt_{u_id}")
-                    if st.button("✨ توليد ومطابقة صورة جديدة بالـ AI", key=f"btn_gen_ai_{u_id}"):
-                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
-                        st.success("✅ تم توليد وتحديث الصورة بالذكاء الاصطناعي بنجاح!")
-
-                col_btn_p1, col_btn_p2 = st.columns(2)
-                with col_btn_p1:
-                    if st.button("👁️ معاينة الكارت المحدث قبل الحفظ", key=f"btn_prev_{u_id}"):
-                        st.session_state[f'show_preview_{u_id}'] = True
-                        st.info("🔍 تم تفعيل وضع المعاينة المباشرة للكارت أدناه!")
-
-                with col_btn_p2:
-                    if st.button("💾 حفظ واعتماد التعديلات نهائياً", key=f"btn_save_eval_{u_id}"):
-                        st.session_state['user_points'][u_id] = {
-                            "earned": edit_earned,
-                            "deducted": edit_deducted,
-                            "notes": edit_admin_notes.strip()
-                        }
-                        st.session_state[f'show_preview_{u_id}'] = False
-                        st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
+                    st.markdown("**2. رابط صورة الذكاء الاصطناعي المحدثة:**")
+                    ai_img_url = st.text_input("رابط صورة الـ AI:", value="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop", key=f"ai_url_{u_id}")
+                    
+                    if st.button("✅ اعتماد هذه الصورة للـ AI للكارت", key=f"btn_confirm_ai_{u_id}"):
+                        st.session_state['user_photos'][u_id] = ai_img_url
+                        st.success("🎉 تم اعتماد وتحديث صورة الكارت بنجاح!")
                         st.rerun()
+
+                if st.button("💾 حفظ واعتماد كل التعديلات نهائياً", key=f"btn_save_eval_{u_id}"):
+                    st.session_state['user_points'][u_id] = {
+                        "earned": edit_earned,
+                        "deducted": edit_deducted,
+                        "notes": edit_admin_notes.strip()
+                    }
+                    st.success("✅ تم حفظ التعديلات بنجاح!")
+                    st.rerun()
 
             st.write("---")
 
@@ -1227,10 +635,8 @@ else:
             col_c1, col_c2 = st.columns([1, 2])
             with col_c1:
                 photo_data = st.session_state['user_photos'].get(u_id)
-                if photo_data and photo_data != "AI_GENERATED":
+                if photo_data:
                     st.image(photo_data, width=200, caption=card_user_data['الموظف'])
-                elif photo_data == "AI_GENERATED":
-                    st.markdown("<div style='width:200px; height:200px; background: linear-gradient(135deg, #4e342e, #8c6d58); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; font-size:18px; font-weight:bold; border:3px solid #8c6d58;'><span style='font-size:50px;'>🤖</span>AI Generated Portrait</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='width:200px; height:200px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:16px; font-size:70px;'>👤</div>", unsafe_allow_html=True)
 
