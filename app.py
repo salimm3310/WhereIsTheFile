@@ -38,16 +38,16 @@ st.markdown("""
     }
     .stButton>button {
         width: 100%;
-        background-color: #2563eb;
-        color: white;
+        background-color: #2563eb !important;
+        color: white !important;
         border-radius: 6px;
         font-weight: bold;
-        padding: 8px;
+        padding: 10px;
         border: none;
     }
     .stButton>button:hover {
-        background-color: #1d4ed8;
-        color: white;
+        background-color: #1d4ed8 !important;
+        color: white !important;
     }
     .status-badge-ontime {
         background-color: #dcfce7;
@@ -172,16 +172,8 @@ def calculate_sla_status(current_status, last_updated_at):
     if not last_updated_at:
         return "في الموعد (On Time)", "status-badge-ontime", 0
 
-    sla_query = "SELECT check_days, check_hours, late_days, late_hours FROM sla_configurations WHERE status_name = ?"
-    res = execute_query(sla_query, (current_status,), fetch=True)
-    
     max_check_hours = 48
     max_late_hours = 96
-
-    if res and len(res[1]) > 0:
-        c_days, c_hrs, l_days, l_hrs = res[1][0]
-        max_check_hours = (c_days * 24) + c_hrs
-        max_late_hours = (l_days * 24) + l_hrs
 
     if isinstance(last_updated_at, str):
         try:
@@ -206,6 +198,14 @@ if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = True
 if 'user_info' not in st.session_state:
     st.session_state['user_info'] = {'user_id': 1, 'full_name': 'SALEM Admin', 'phone_number': '01212231815', 'role_group': 'Admin'}
+
+if 'active_shipments' not in st.session_state:
+    st.session_state['active_shipments'] = [
+        {"id": 1, "file_num": "260862115", "company": "U.S.C", "bkg": "CFA0951367", "inv": "3A - 3B", "status": "Under Operation", "holded": 0, "h_reason": "", "last_up": "2026-09-18 10:00:00", "creator": "SALEM Admin"},
+        {"id": 2, "file_num": "260862116", "company": "CFA Global", "bkg": "CFA0951368", "inv": "104B", "status": "Waiting BL", "holded": 0, "h_reason": "", "last_up": "2026-09-18 11:30:00", "creator": "أحمد علي"},
+        {"id": 3, "file_num": "260862117", "company": "Al-Salem Trading", "bkg": "CFA0951369", "inv": "88C", "status": "Ready to be invoiced", "holded": 0, "h_reason": "", "last_up": "2026-09-18 12:15:00", "creator": "SALEM Admin"},
+        {"id": 4, "file_num": "260862118", "company": "U.S.C", "bkg": "CFA0951370", "inv": "99A", "status": "Draft", "holded": 1, "h_reason": "في انتظار موافقة العميل", "last_up": "2026-09-18 09:00:00", "creator": "محمود حسن"}
+    ]
 
 # الهيدر واللوجو الرئيسي
 st.markdown("<h1 style='text-align: center; color: #2563eb;'>📦 تطبيق فين الملف؟</h1>", unsafe_allow_html=True)
@@ -246,26 +246,12 @@ if st.session_state['logged_in']:
     if choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
 
-        shipments_query = """
-            SELECT s.shipment_id, s.file_number, s.company_name, s.invoice_number, 
-                   s.current_status, s.is_holded, s.last_updated_at, u.full_name, u.user_id
-            FROM shipments s
-            LEFT JOIN users u ON s.created_by_user = u.user_id
-        """
-        res = execute_query(shipments_query, fetch=True)
-
-        if res and len(res[1]) > 0:
-            df_shipments = pd.DataFrame([list(r) for r in res[1]], columns=[
-                "shipment_id", "file_number", "company_name", "invoice_number", 
-                "current_status", "is_holded", "last_updated_at", "full_name", "user_id"
-            ])
-        else:
-            df_shipments = pd.DataFrame([
-                {"shipment_id": 1, "file_number": "260862115", "company_name": "U.S.C", "invoice_number": "3A - 3B", "current_status": "Under Operation", "is_holded": 0, "last_updated_at": "2026-09-18 10:00:00", "full_name": "SALEM Admin", "user_id": 1},
-                {"shipment_id": 2, "file_number": "260862116", "company_name": "CFA Global", "invoice_number": "104B", "current_status": "Waiting BL", "is_holded": 0, "last_updated_at": "2026-09-18 11:30:00", "full_name": "أحمد علي", "user_id": 2},
-                {"shipment_id": 3, "file_number": "260862117", "company_name": "Al-Salem Trading", "invoice_number": "88C", "current_status": "Ready to be invoiced", "is_holded": 0, "last_updated_at": "2026-09-18 12:15:00", "full_name": "SALEM Admin", "user_id": 1},
-                {"shipment_id": 4, "file_number": "260862118", "company_name": "U.S.C", "invoice_number": "99A", "current_status": "Draft", "is_holded": 1, "last_updated_at": "2026-09-18 09:00:00", "full_name": "محمود حسن", "user_id": 3}
-            ])
+        df_shipments = pd.DataFrame(st.session_state['active_shipments'])
+        df_shipments.rename(columns={
+            "id": "shipment_id", "file_num": "file_number", "company": "company_name",
+            "inv": "invoice_number", "status": "current_status", "holded": "is_holded",
+            "last_up": "last_updated_at", "creator": "full_name"
+        }, inplace=True)
 
         col_filter1, col_filter2 = st.columns(2)
 
@@ -344,39 +330,23 @@ if st.session_state['logged_in']:
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
 
-        shipments_query = """
-            SELECT s.shipment_id, s.file_number, s.company_name, s.booking_number, 
-                   s.invoice_number, s.current_status, s.is_holded, s.hold_reason, 
-                   s.last_updated_at, u.full_name
-            FROM shipments s
-            LEFT JOIN users u ON s.created_by_user = u.user_id
-            ORDER BY s.last_updated_at DESC
-        """
-        res = execute_query(shipments_query, fetch=True)
-
-        rows = res[1] if (res and len(res[1]) > 0) else [
-            (1, "260862115", "U.S.C", "CFA0951367", "3A - 3B", "Under Operation", 0, None, "2026-09-18 10:00:00", "SALEM Admin"),
-            (2, "260862116", "CFA Global", "CFA0951368", "104B", "Waiting BL", 0, None, "2026-09-18 11:30:00", "أحمد علي"),
-            (3, "260862117", "Al-Salem Trading", "CFA0951369", "88C", "Ready to be invoiced", 0, None, "2026-09-18 12:15:00", "SALEM Admin"),
-            (4, "260862118", "U.S.C", "CFA0951370", "99A", "Draft", 1, "في انتظار موافقة العميل", "2026-09-18 09:00:00", "محمود حسن")
-        ]
+        rows = st.session_state['active_shipments']
 
         shipment_list = []
         for r in rows:
-            s_id, file_num, company, bkg, inv, status, holded, h_reason, last_up, creator = r
-            sla_label, sla_class, elapsed_h = calculate_sla_status(status, last_up)
+            sla_label, sla_class, elapsed_h = calculate_sla_status(r['status'], r['last_up'])
             
             shipment_list.append({
-                'ID': s_id,
-                'رقم الملف': file_num,
-                'الشركة': company,
-                'رقم الحجز': bkg,
-                'رقم الفاتورة': inv,
-                'الحالة الحالية': f"⏸️ معلقة (Hold)" if holded else status,
+                'ID': r['id'],
+                'رقم الملف': r['file_num'],
+                'الشركة': r['company'],
+                'رقم الحجز': r['bkg'],
+                'رقم الفاتورة': r['inv'],
+                'الحالة الحالية': f"⏸️ معلقة (Hold)" if r['holded'] else r['status'],
                 'وضع SLA': sla_label,
                 'الساعات المنقضية': f"{elapsed_h:.1f} ساعة",
-                'الموظف المسؤول': creator,
-                'آخر تحديث': str(last_up) if last_up else ''
+                'الموظف المسؤول': r['creator'],
+                'آخر تحديث': str(r['last_up'])
             })
 
         df = pd.DataFrame(shipment_list)
@@ -386,13 +356,9 @@ if st.session_state['logged_in']:
         st.write("---")
         st.markdown("### 🛠️ إجراءات تحديث الحالة وتأكيد الملاحظات")
 
-        shipment_options = {f"ملف: {r[1]} - شركة: {r[2]} (الحالة: {r[5]})": r for r in rows}
+        shipment_options = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة الحالية: {r['status']})": r for r in rows}
         selected_option = st.selectbox("اختر الشحنة المراد تغيير حالتها أو إثبات ملاحظة عليها:", list(shipment_options.keys()))
         s_data = shipment_options[selected_option]
-        selected_shipment_id = s_data[0]
-        curr_status = s_data[5]
-        curr_holded = s_data[6]
-        curr_h_reason = s_data[7]
 
         col_status_change, col_notes = st.columns([2, 2])
 
@@ -404,32 +370,39 @@ if st.session_state['logged_in']:
                 'Ready to be invoiced', 'Closed'
             ]
             
-            new_selected_status = st.selectbox("اختر الحالة الجديدة:", all_statuses, index=all_statuses.index(curr_status) if curr_status in all_statuses else 0)
-            set_hold = st.checkbox("تفعيل تعليق الشحنة (Put on Hold)", value=bool(curr_holded))
+            curr_st = s_data['status']
+            new_selected_status = st.selectbox("اختر الحالة الجديدة:", all_statuses, index=all_statuses.index(curr_st) if curr_st in all_statuses else 0)
+            set_hold = st.checkbox("تفعيل تعليق الشحنة (Put on Hold)", value=bool(s_data['holded']))
             hold_reason_text = ""
             if set_hold:
-                hold_reason_text = st.text_input("سبب التعليق (إجباري عند تفعيل التعليق):", value=curr_h_reason if curr_h_reason else "")
+                hold_reason_text = st.text_input("سبب التعليق (إجباري عند تفعيل التعليق):", value=s_data['h_reason'] if s_data['h_reason'] else "")
 
-            if st.button("💾 حفظ التحديث وتسجيل التقييم (1 نقطة)"):
+            save_clicked = st.button("💾 حفظ التحديث وتسجيل التقييم (1 نقطة)", key="save_status_btn")
+            
+            if save_clicked:
                 if set_hold and hold_reason_text.strip() == "":
                     st.error("⚠️ يرجى كتابة سبب التعليق عند تفعيل خيار Hold.")
                 else:
-                    eval_sql = "INSERT INTO performance_evaluations (user_id, shipment_id, evaluation_type, time_difference_hours, admin_status) VALUES (?, ?, 'Positive_Bonus', 0, 'Approved')"
-                    execute_query(eval_sql, (user['user_id'], selected_shipment_id))
+                    for item in st.session_state['active_shipments']:
+                        if item['id'] == s_data['id']:
+                            item['status'] = new_selected_status
+                            item['holded'] = 1 if set_hold else 0
+                            item['h_reason'] = hold_reason_text.strip() if set_hold else ""
+                            item['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
                     update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
-                    execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, selected_shipment_id))
+                    execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
 
-                    st.success(f"✅ تم تحديث حالة الملف ({s_data[1]}) إلى [{new_selected_status}] وتسجيل 1 نقطة تقييم للموظف بنجاح!")
+                    st.success(f"🎉 تم تحديث حالة الملف ({s_data['file_num']}) بنجاح إلى [{new_selected_status}] وتسجيل 1 نقطة تقييم!")
                     st.rerun()
 
         with col_notes:
             st.markdown("**2. إضافة ملاحظة ميدانية مفتوحة (Open Note):**")
             new_note = st.text_area("اكتب ملاحظتك التوضيحية على هذه الشحنة:", height=110, placeholder="مثال: العميل طلب التأجيل لحين استلام الفاتورة النهائية")
-            if st.button("📝 إضافة الملاحظة للسجل"):
+            if st.button("📝 إضافة الملاحظة للسجل", key="add_note_btn"):
                 if new_note.strip() != "":
                     note_sql = "INSERT INTO shipment_notes (shipment_id, added_by_user, note_content) VALUES (?, ?, ?)"
-                    execute_query(note_sql, (user['user_id'], selected_shipment_id, new_note.strip()))
+                    execute_query(note_sql, (s_data['id'], user['user_id'], new_note.strip()))
                     st.success("✅ تم إضافة الملاحظة وتوثيقها باسم الموظف بنجاح.")
                 else:
                     st.warning("يرجى كتابة نص الملاحظة قبل الضغط على الزر.")
@@ -493,6 +466,19 @@ if st.session_state['logged_in']:
                 if file_num.strip() == "" or company.strip() == "":
                     st.error("❌ رقم الملف واسم الشركة حقول إجبارية.")
                 else:
+                    new_item = {
+                        "id": len(st.session_state['active_shipments']) + 1,
+                        "file_num": file_num,
+                        "company": company,
+                        "bkg": bkg_num,
+                        "inv": inv_num,
+                        "status": "Under Operation",
+                        "holded": 0,
+                        "h_reason": "",
+                        "last_up": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        "creator": user['full_name']
+                    }
+                    st.session_state['active_shipments'].append(new_item)
                     st.success(f"🎉 تم حفظ الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
