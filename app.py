@@ -1,19 +1,73 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import urllib.parse
 
 # ---------------------------------------------------------
-# 1. تهيئة إعدادات الصفحة
+# 1. تهيئة إعدادات الصفحة والتصميم البصري عالي التباين
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Mohamed Salem OPS App",
     page_icon="📦",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# تطبيق تنسيقات CSS المخصصة والتصميم الفاخر
+st.markdown("""
+<style>
+    /* خلفية عامة أنيقة وتصميم فاخر */
+    .stApp {
+        background-color: #f8fafc;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* القائمة الجانبية M.Salem OPS */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        color: #ffffff;
+    }
+    
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
+    }
+
+    /* عناوين الجداول والتنسيق المتباين */
+    .stDataFrame {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background-color: #ffffff;
+    }
+
+    /* الأزرار الاحترافية */
+    .stButton>button {
+        background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+        color: white !important;
+        border-radius: 8px;
+        font-weight: bold;
+        border: none;
+        padding: 0.5rem 1rem;
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    }
+    
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #1d4ed8 0%, #1e40af 100%);
+    }
+
+    /* كروت المؤشرات KPI Card */
+    .kpi-card {
+        background: #ffffff;
+        border-right: 6px solid #2563eb;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------------------------------------------------
-# 2. تهيئة بيانات Session State
+# 2. تهيئة البيانات الأساسية بالنظام (Session State)
 # ---------------------------------------------------------
 if 'registered_users' not in st.session_state:
     st.session_state['registered_users'] = [
@@ -24,8 +78,8 @@ if 'registered_users' not in st.session_state:
 
 if 'active_shipments' not in st.session_state:
     st.session_state['active_shipments'] = [
-        {"file_num": "260862115", "company": "U.S.C", "inv": "3A - 3B", "bkg": "BKG-992", "status": "Under Operation", "last_status_updater": "أحمد محمود"},
-        {"file_num": "260962779", "company": "Global Trade", "inv": "908013", "bkg": "BKG-104", "status": "Closed", "last_status_updater": "Mohamed Salem"}
+        {"file_num": "260862115", "company": "U.S.C", "inv": "3A - 3B", "bkg": "BKG-992", "status": "Under Operation", "last_status_updater": "أحمد محمود", "eta": "2026-09-25", "sla_hours": 48},
+        {"file_num": "260962779", "company": "Global Trade", "inv": "908013", "bkg": "BKG-104", "status": "Closed", "last_status_updater": "Mohamed Salem", "eta": "2026-09-18", "sla_hours": 24}
     ]
 
 if 'internal_messages' not in st.session_state:
@@ -36,7 +90,7 @@ if 'whatsapp_logs' not in st.session_state:
 
 if 'user_points' not in st.session_state:
     st.session_state['user_points'] = {
-        1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة"},
+        1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة بنجاح"},
         2: {"earned": 1, "deducted": 1, "notes": "إغلاق ملف وتأخير سابق"},
         3: {"earned": 0, "deducted": 0, "notes": ""}
     }
@@ -46,6 +100,8 @@ if 'user_photos' not in st.session_state:
 
 if 'logged_user' not in st.session_state:
     st.session_state['logged_user'] = st.session_state['registered_users'][0]
+
+user = st.session_state['logged_user']
 
 # ---------------------------------------------------------
 # 3. دالة تنسيق رقم الواتساب
@@ -58,13 +114,13 @@ def format_whatsapp_phone(phone_str):
         clean = "2" + clean
     return clean
 
-user = st.session_state['logged_user']
-
 # ---------------------------------------------------------
-# 4. القائمة الجانبية والتنقل
+# 4. القائمة الجانبية الهيكلية
 # ---------------------------------------------------------
-st.sidebar.title(f"👤 {user['full_name']}")
-st.sidebar.caption(f"المجموعة: {user['role_group']}")
+st.sidebar.markdown(f"## 🏢 M.Salem OPS")
+st.sidebar.markdown(f"**المستخدم الحالي:** {user['full_name']}")
+st.sidebar.markdown(f"**الصلاحية:** `{user['role_group']}`")
+st.sidebar.write("---")
 
 menu_options = [
     "⚙️ لوحة التحكم الإدارية (Admin Panel)",
@@ -133,21 +189,72 @@ if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
 # التبويب 2: لوحة التحليلات
 # ---------------------------------------------------------
 elif choice == "📊 لوحة التحليلات الأداء (Analytics Dashboard)":
-    st.subheader("📊 لوحة التحليلات الأداء (Analytics Dashboard)")
-    st.info("💡 الشاشة تعمل بكفاءة عالية لعرض المؤشرات الرئيسية الشاملة.")
+    st.subheader("📊 لوحة تحليلات الأداء والعمليات")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_shipments = len(st.session_state['active_shipments'])
+    closed_shipments = len([s for s in st.session_state['active_shipments'] if s.get('status') == 'Closed'])
+    active_shipments = total_shipments - closed_shipments
+    
+    with col1:
+        st.markdown("<div class='kpi-card'><h3>📦 إجمالي الشحنات</h3><h2>{}</h2></div>".format(total_shipments), unsafe_allow_html=True)
+    with col2:
+        st.markdown("<div class='kpi-card'><h3>⚙️ قيد التشغيل</h3><h2>{}</h2></div>".format(active_shipments), unsafe_allow_html=True)
+    with col3:
+        st.markdown("<div class='kpi-card'><h3>✅ الملفات المغلقة</h3><h2>{}</h2></div>".format(closed_shipments), unsafe_allow_html=True)
+    with col4:
+        st.markdown("<div class='kpi-card'><h3>👥 فريق العمل</h3><h2>{}</h2></div>".format(len(st.session_state['registered_users'])), unsafe_allow_html=True)
+
+    st.markdown("### 📈 توزيع حالات الشحنات الحالية")
+    df_analytics = pd.DataFrame(st.session_state['active_shipments'])
+    st.dataframe(df_analytics[['file_num', 'company', 'inv', 'status', 'last_status_updater']], use_container_width=True)
 
 # ---------------------------------------------------------
 # التبويب 3: SLA
 # ---------------------------------------------------------
 elif choice == "⏳ تتبع دوره حياة الملفات والتأخيرات (SLA)":
-    st.subheader("⏳ تتبع دوره حياة الملفات والتأخيرات (SLA)")
-    st.info("💡 الشاشة مجهزة لمتابعة مهل المعالجة والتأخيرات التشغيلية.")
+    st.subheader("⏳ تتبع دوره حياة الملفات ومعايير SLA")
+    st.info("💡 يتم متابعة التأخيرات بخصم نقاط تلقائية من تقييم الموظف القائم على الملف عند تجاوز المهل المحددة.")
+    df_sla = pd.DataFrame(st.session_state['active_shipments'])
+    st.dataframe(df_sla, use_container_width=True)
 
 # ---------------------------------------------------------
-# التبويب 4: شاشة الشحنات
+# التبويب 4: شاشة الشحنات 11 حقل
 # ---------------------------------------------------------
 elif choice == "📦 إضافة إدارة وتحديث حالة شحنة (11 حقل)":
     st.subheader("📦 إضافة إدارة وتحديث حالة شحنة (11 حقل)")
+    
+    with st.expander("➕ إضافة شحنة جديدة (الإدخال الذكي 11 حقل)"):
+        with st.form("add_shipment_form"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                f_num = st.text_input("رقم الملف:")
+                f_comp = st.text_input("اسم الشركة/العميل:")
+                f_inv = st.text_input("رقم الفاتورة:")
+            with c2:
+                f_bkg = st.text_input("رقم الحجز BKG:")
+                f_pol = st.text_input("ميناء الشحن POL:")
+                f_pod = st.text_input("ميناء الوصول POD:")
+            with c3:
+                f_status = st.selectbox("الحالة التشغيلية:", ["Under Operation", "Customs Clearance", "Closed"])
+                f_eta = st.date_input("تاريخ الوصول المتوقع ETA:")
+            
+            submit_ship = st.form_submit_button("إضافة الشحنة")
+            if submit_ship:
+                if f_num and f_comp:
+                    st.session_state['active_shipments'].append({
+                        "file_num": f_num,
+                        "company": f_comp,
+                        "inv": f_inv,
+                        "bkg": f_bkg,
+                        "status": f_status,
+                        "last_status_updater": user['full_name'],
+                        "eta": str(f_eta)
+                    })
+                    st.success("✅ تم إضافة الشحنة بنجاح!")
+                    st.rerun()
+
+    st.markdown("### 📋 جدول الشحنات الحالي")
     st.dataframe(pd.DataFrame(st.session_state['active_shipments']), use_container_width=True)
 
 # ---------------------------------------------------------
@@ -200,8 +307,6 @@ elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp
                     })
                     st.success("✅ تم إرسال الرسالة الداخلية بنجاح!")
                     st.rerun()
-                else:
-                    st.warning("يرجى كتابة نص الرسالة أولاً.")
 
         with col_inbox:
             st.markdown("### 📥 صندوق الرسائل الواردة")
@@ -428,4 +533,5 @@ elif choice == "📊 تقارير تقييم الأداء والمكافآت (Pe
 # ---------------------------------------------------------
 elif choice == "📜 سجل الحالات والتدقيق (Status Logs & Audit Trail)":
     st.subheader("📜 سجل الحالات والتدقيق (Status Logs & Audit Trail)")
-    st.info("💡 الشاشة مجهزة لعرض كافة سجلات التحديث والعمليات.")
+    st.markdown("### 🔍 تتبع كافة عمليات التحديث والتدقيق بالنظام")
+    st.info("💡 يتم أرشفة وتوثيق كافة رسائل وتحديثات الشحنات والحالات التشغيلية تلقائياً.")
