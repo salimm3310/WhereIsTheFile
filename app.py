@@ -9,7 +9,7 @@ import plotly.express as px
 from db_connection import execute_query
 
 # =========================================================
-# 1. إعدادات الصفحة والتصميم العام للهوية البصرية والخلفية
+# 1. إعدادات الصفحة والتصميم العام للهوية البصرية وخلفية البرنامج
 # =========================================================
 st.set_page_config(
     page_title="فين الملف؟ - Mohamed Salem OPS App",
@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# دالة قراءة وتطبيق صورة الخلفية خلفية المشروع
+# دالة قراءة وتطبيق صورة الخلفية للمشروع
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, 'rb') as f:
@@ -44,14 +44,14 @@ st.markdown(f"""
         font-weight: 800;
         margin-bottom: 2px;
         font-size: 32px;
-    }
+    }}
     .sub-header {{
         text-align: center;
         color: #475569;
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 25px;
-    }
+    }}
     .stButton>button {{
         width: 100%;
         background-color: #2563eb !important;
@@ -323,7 +323,7 @@ if not st.session_state['logged_in']:
                             "phone_number": reg_phone.strip(),
                             "password_hash": make_hashes(reg_pass.strip()),
                             "role_group": "Unassigned",
-                            "allowed_pages": [],  # ينتظر تحديد الشاشات المسموحة له من المدير
+                            "allowed_pages": [],
                             "status": "Pending"
                         }
                         st.session_state['registered_users'].append(new_u)
@@ -348,7 +348,6 @@ else:
 
     st.write("---")
 
-    # إظهار الشاشات المسموحة فقط لهذا المستخدم بناءً على صلاحيات الاعتماد من المدير
     allowed_menu = user.get('allowed_pages', ALL_MODULES)
     if not allowed_menu:
         allowed_menu = ALL_MODULES
@@ -440,7 +439,7 @@ else:
             st.dataframe(filtered_df[filtered_df["company_name"] == sel_c], use_container_width=True)
 
     # ---------------------------------------------------------
-    # التبويب 2: إدارة الحالات وتتبع المهل والتعليق والملاحظات
+    # التبويب 2: إدارة الحالات والتعليق والملاحظات
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
