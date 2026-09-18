@@ -27,7 +27,7 @@ def get_base64_of_bin_file(bin_file):
 
 bg_base64 = get_base64_of_bin_file("background.jpg")
 
-# الشفافية المحدثة بنسبة 80% (زيادة 5%) مع خطوط 26px للعناوين و 24px للبيانات
+# الشفافية المحدثة بنسبة 80% مع خطوط 26px للعناوين و 24px للبيانات
 st.markdown(f"""
 <style>
     .stApp {{
@@ -511,14 +511,14 @@ else:
 
             with col_aud1:
                 st.markdown(f"#### 📬 صندوق البريد والرسائل الداخلية لـ ({aud_u['full_name']})")
-                user_msgs = [m for m in st.session_state['internal_messages'] if aud_u['full_name'] in m['sender'] or aud_u['full_name'] in m['recipient']]
+                user_msgs = [m for m in st.session_state['internal_messages'] if aud_u['full_name'] in m.get('sender', '') or aud_u['full_name'] in m.get('recipient', '')]
                 if user_msgs:
                     for m in user_msgs:
                         st.markdown(f"""
                         <div class="chat-bubble-in">
-                            <strong>من: {m['sender']} ➔ إلى: {m.get('recipient', 'الجميع')}</strong><br>
-                            <span>{m['text']}</span><br>
-                            <small style='color:#64748b;'>📅 {m['time']}</small>
+                            <strong>من: {m.get('sender', 'غير معروف')} ➔ إلى: {m.get('recipient', 'الجميع')}</strong><br>
+                            <span>{m.get('text', '')}</span><br>
+                            <small style='color:#64748b;'>📅 {m.get('time', '')}</small>
                         </div>
                         """, unsafe_allow_html=True)
                 else:
@@ -526,14 +526,14 @@ else:
 
             with col_aud2:
                 st.markdown(f"#### 📱 الأرقام والمراسلات الخارجية عبر (WhatsApp) لـ ({aud_u['full_name']})")
-                user_wa = [w for w in st.session_state['whatsapp_logs'] if aud_u['full_name'] in w['sender']]
+                user_wa = [w for w in st.session_state['whatsapp_logs'] if aud_u['full_name'] in w.get('sender', '')]
                 if user_wa:
                     for w in user_wa:
                         st.markdown(f"""
                         <div class="chat-bubble-in" style="border-right: 6px solid #16a34a;">
-                            <strong>المستلم: {w['target_name']} (+{w['phone']})</strong><br>
-                            <span>{w['text']}</span><br>
-                            <small style='color:#64748b;'>📅 {w['time']}</small>
+                            <strong>المستلم: {w.get('target_name', 'غير معروف')} (+{w.get('phone', '')})</strong><br>
+                            <span>{w.get('text', '')}</span><br>
+                            <small style='color:#64748b;'>📅 {w.get('time', '')}</small>
                         </div>
                         """, unsafe_allow_html=True)
                 else:
@@ -576,7 +576,6 @@ else:
                 m2.metric("➖ الخصومات", f"{new_deducted} نقطة")
                 m3.metric("🏆 صافي النقاط", f"{net_pts} نقطة")
 
-                # رسم بياني تحليلي
                 df_eval_chart = pd.DataFrame([
                     {"مؤشر": "النقاط المكتسبة", "العدد": new_earned},
                     {"مؤشر": "الخصومات والتأخير", "العدد": new_deducted}
@@ -879,9 +878,9 @@ else:
                 for msg in reversed(st.session_state['internal_messages']):
                     st.markdown(f"""
                     <div class="chat-bubble-in">
-                        <strong>من: {msg['sender']} ➔ إلى: {msg.get('recipient', 'الجميع')}</strong><br>
-                        <span>{msg['text']}</span><br>
-                        <small style="color: #94a3b8;">📅 {msg['time']}</small>
+                        <strong>من: {msg.get('sender', 'غير معروف')} ➔ إلى: {msg.get('recipient', 'الجميع')}</strong><br>
+                        <span>{msg.get('text', '')}</span><br>
+                        <small style="color: #94a3b8;">📅 {msg.get('time', '')}</small>
                     </div>
                     """, unsafe_allow_html=True)
 
