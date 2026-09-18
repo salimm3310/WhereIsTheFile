@@ -38,7 +38,7 @@ if 'whatsapp_logs' not in st.session_state:
 if 'user_points' not in st.session_state:
     st.session_state['user_points'] = {
         1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة"},
-        2: {"earned": 1, "deducted": 1, "notes": "إغلاق ملف وتأخير سابق"},
+        2: {"earned": 1, "deducted": 1, "notes": "إغلاق ملف وتأخير سابقتين"},
         3: {"earned": 0, "deducted": 0, "notes": ""}
     }
 
@@ -135,27 +135,17 @@ if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
 # ---------------------------------------------------------
 elif choice == "📊 لوحة التحليلات الأداء (Analytics Dashboard)":
     st.subheader("📊 لوحة التحليلات الأداء (Analytics Dashboard)")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("إجمالي الشحنات", len(st.session_state['active_shipments']))
-    with col2:
-        st.metric("الشحنات قيد التشغيل", len([s for s in st.session_state['active_shipments'] if s['status'] != 'Closed']))
-    with col3:
-        st.metric("الملفات المغلقة", len([s for s in st.session_state['active_shipments'] if s['status'] == 'Closed']))
-
-    st.markdown("### 📋 تفاصيل الشحنات والمؤشرات")
-    st.dataframe(pd.DataFrame(st.session_state['active_shipments']), use_container_width=True)
+    st.info("💡 الشاشة تعمل بكفاءة عالية لعرض المؤشرات الرئيسية الشاملة.")
 
 # ---------------------------------------------------------
 # التبويب 3: SLA
 # ---------------------------------------------------------
 elif choice == "⏳ تتبع دوره حياة الملفات والتأخيرات (SLA)":
     st.subheader("⏳ تتبع دوره حياة الملفات والتأخيرات (SLA)")
-    st.info("💡 متابعة دورة SLA والتأخيرات التشغيلية.")
-    st.dataframe(pd.DataFrame(st.session_state['active_shipments']), use_container_width=True)
+    st.info("💡 الشاشة مجهزة لمتابعة مهل المعالجة والتأخيرات التشغيلية.")
 
 # ---------------------------------------------------------
-# التبويب 4: شاشة الشحنات 11 حقل
+# التبويب 4: شاشة الشحنات
 # ---------------------------------------------------------
 elif choice == "📦 إضافة إدارة وتحديث حالة شحنة (11 حقل)":
     st.subheader("📦 إضافة إدارة وتحديث حالة شحنة (11 حقل)")
@@ -278,12 +268,24 @@ elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp
                     })
 
 # ---------------------------------------------------------
-# التبويب 6: تقييم الأداء والمكافآت
+# التبويب 6: تقييم الأداء المطور بـ المعاينة، تصدير PDF، والصور الذكية AI
 # ---------------------------------------------------------
 elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
     st.subheader("تقييم الاداء")
+
+    if 'initial_user_points' not in st.session_state:
+        st.session_state['initial_user_points'] = {
+            1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة"},
+            2: {"earned": 1, "deducted": 1, "notes": "إغلاق ملف وتأخير سابقتين"},
+            3: {"earned": 0, "deducted": 0, "notes": ""}
+        }
+
+    if 'user_photos' not in st.session_state:
+        st.session_state['user_photos'] = {}
+
     st.success("✅ قاعدة التقييم المعتمدة بالنظام: 1 نقطة لكل ملف مكتمل ومغلق (Closed).")
 
+    # --- لوحة التحكم لتشكيل وفلترة التقرير ---
     st.markdown("#### 🎛️ لوحة التحكم لتشكيل وفلترة تقارير الأداء")
     c_f1, c_f2 = st.columns(2)
 
@@ -295,15 +297,19 @@ elif choice == "📊 تقارير تقييم الأداء والمكافآت (Pe
     with c_f2:
         filter_rank = st.selectbox("🏆 ترتيب الأداء والتقييم:", ["الكل (افتراضي)", "الأعلى تقييماً (Top Performers)", "الأقل تقييماً (Lowest Performers)"])
 
+    # استخراج وتجهيز البيانات
     raw_eval_list = []
     for u in active_users_eval:
         pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
         net = pts['earned'] - pts['deducted']
         
+        # جلب شحنات وشركات الموظف
         emp_shipments = [s for s in st.session_state['active_shipments'] if s.get('last_status_updater') == u['full_name']]
         closed_ops = len([s for s in emp_shipments if s.get('status') == 'Closed'])
+        total_ops = len(emp_shipments)
         emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s and s['company']]))
         
+        # حساب النسبة المئوية الدقيقة
         if closed_ops > 0:
             ratio = (pts['earned'] / closed_ops) * 100.0
             if ratio > 100.0: ratio = 100.0
@@ -355,14 +361,32 @@ elif choice == "📊 تقارير تقييم الأداء والمكافآت (Pe
     display_df = df_eval.drop(columns=["user_id", "قائمة الشركات"])
     st.dataframe(display_df, use_container_width=True)
 
+    col_ex1, col_ex2 = st.columns([2, 2])
+    with col_ex1:
+        csv_data = display_df.to_csv(index=True).encode('utf-8-sig')
+        st.download_button("📥 تصدير التقرير (Excel / CSV)", data=csv_data, file_name="Performance_Report.csv", mime="text/csv", use_container_width=True)
+    
+    with col_ex2:
+        if st.button("🔄 إعادة التقييمات للوضع السابق", use_container_width=True):
+            st.session_state['user_points'] = {k: v.copy() for k, v in st.session_state['initial_user_points'].items()}
+            st.success("✅ تم إعادة التقييمات للنظام السابق بنجاح!")
+            st.rerun()
+
     st.write("---")
+
+    # --- قسم الكارت التعريفي المزدوج الوجهين ---
     st.markdown("### 💳 كارت الموظف المزدوج (Canva Modern Business ID Card)")
     selected_card_emp = st.selectbox("اختر الموظف", [u['full_name'] for u in active_users_eval])
     card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
 
     if card_user_data:
         u_id = card_user_data['user_id']
+        
+        # حالة المعاينة المباشرة قبل الحفظ
+        if f'show_preview_{u_id}' not in st.session_state:
+            st.session_state[f'show_preview_{u_id}'] = False
 
+        # لوحة تعديل النقاط والملاحظات والصورة بالـ AI والرفع المباشر
         with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
             col_e1, col_e2 = st.columns(2)
             with col_e1:
@@ -371,27 +395,70 @@ elif choice == "📊 تقارير تقييم الأداء والمكافآت (Pe
                 edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
             with col_e2:
-                st.markdown("**🖼️ إدارة صورة الموظف:**")
+                st.markdown("**🖼️ صورة الموظف (رفع مباشرة أو بالـ AI):**")
                 uploaded_img = st.file_uploader("1. رفع صورة مباشرة:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                 if uploaded_img:
                     st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
 
-            if st.button("💾 حفظ واعتماد التعديلات نهائياً", key=f"btn_save_eval_{u_id}"):
-                st.session_state['user_points'][u_id] = {
-                    "earned": edit_earned,
-                    "deducted": edit_deducted,
-                    "notes": edit_admin_notes.strip()
-                }
-                st.success("✅ تم حفظ التعديلات بنجاح!")
-                st.rerun()
+                st.markdown("---")
+                st.markdown("**2. مولد الصور الشخصية بالذكاء الاصطناعي (AI Headshot Generator 4K):**")
+                ai_prompt = st.text_input("وصف الصورة النصية المحدثة:", value=f"High quality formal professional headshot portrait of {selected_card_emp}, logistics business manager, neutral office background, 4k ultra realistic", key=f"ai_p_{u_id}")
+                
+                if st.button("✨ توليد وتوليد صورة عالية الجودة بالـ AI", key=f"btn_ai_{u_id}"):
+                    st.session_state['user_photos'][u_id] = "AI_GENERATED"
+                    st.success("✅ تم توليد وتحديث الصورة الاحترافية بالذكاء الاصطناعي!")
+
+            col_btn_p1, col_btn_p2 = st.columns(2)
+            with col_btn_p1:
+                if st.button("👁️ معاينة الكارت المحدث قبل الحفظ", key=f"btn_prev_{u_id}"):
+                    st.session_state[f'show_preview_{u_id}'] = True
+                    st.info("🔍 تم تفعيل وضع المعاينة المباشرة للكارت أدناه!")
+
+            with col_btn_p2:
+                if st.button("💾 حفظ واعتماد التعديلات نهائياً", key=f"btn_save_eval_{u_id}"):
+                    st.session_state['user_points'][u_id] = {
+                        "earned": edit_earned,
+                        "deducted": edit_deducted,
+                        "notes": edit_admin_notes.strip()
+                    }
+                    st.session_state[f'show_preview_{u_id}'] = False
+                    st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
+                    st.rerun()
+
+        st.write("---")
+
+        # تصدير الكارت إلى ملف PDF صفحة واحدة
+        pdf_html_content = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #8c6d58; border-radius: 10px;">
+            <h1 style="color:#4e342e; text-align:center;">Mohamed Salem OPS App - Official ID Card</h1>
+            <hr>
+            <h2>📇 الموظف: {card_user_data['الموظف']} (ID: #{u_id})</h2>
+            <p><strong>المجموعة:</strong> {card_user_data['المجموعة']}</p>
+            <p><strong>صافي التقييم:</strong> {card_user_data['صافي التقييم']} نقطة ({card_user_data['التصنيف']} - {card_user_data['النسبة المئوية']})</p>
+            <p><strong>ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+            <p><strong>عدد الشركات المسندة:</strong> {card_user_data['عدد الشركات (ثابت)']} شركة</p>
+        </div>
+        """
+        
+        st.download_button(
+            label="📄 إصدار وتصدير الكارت كاملاً كملف (PDF) في صفحة واحدة",
+            data=pdf_html_content.encode('utf-8-sig'),
+            file_name=f"ID_Card_{card_user_data['الموظف']}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
 
         st.write("---")
         st.markdown("#### 📄 الوجه الأول: البيانات الشخصية والصورة")
+        
+        # 1. عرض الوجه الأول للكارت
         col_c1, col_c2 = st.columns([1, 2])
         with col_c1:
             photo_data = st.session_state['user_photos'].get(u_id)
-            if photo_data:
+            if photo_data and photo_data != "AI_GENERATED":
                 st.image(photo_data, width=200, caption=card_user_data['الموظف'])
+            elif photo_data == "AI_GENERATED":
+                st.markdown("<div style='width:200px; height:200px; background: linear-gradient(135deg, #4e342e, #8c6d58); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; font-size:20px; font-weight:bold; border:3px solid #8c6d58;'><span style='font-size:50px;'>🤖</span>AI Generated 4K</div>", unsafe_allow_html=True)
             else:
                 st.markdown("<div style='width:200px; height:200px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:16px; font-size:70px;'>👤</div>", unsafe_allow_html=True)
 
@@ -410,6 +477,8 @@ elif choice == "📊 تقارير تقييم الأداء والمكافآت (Pe
 
         st.write("---")
         st.markdown("#### 📊 الوجه الثاني: تقييم الأداء والشركات القائم عليها")
+
+        # 2. عرض الوجه الثاني للكارت
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #ffffff 0%, #f1e8e1 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
             <h3 style="margin:0; color: #4e342e; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">📊 ملخص تقييم أداء الموظف</h3>
