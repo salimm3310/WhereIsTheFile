@@ -1043,12 +1043,11 @@ else:
                         })
 
     # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور والتفاعلي بالكامل
+    # التبويب 6: تقييم الأداء المطور والمحدث بالكامل
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
 
-        # حفظ نسخة احتياطية لإعادة الضبط إذا لم تكن موجودة
         if 'initial_user_points' not in st.session_state:
             st.session_state['initial_user_points'] = {
                 1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة"},
@@ -1078,10 +1077,27 @@ else:
             pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
             net = pts['earned'] - pts['deducted']
             
-            # جلب الشركات التي عمل عليها الموظف من سلة الشحنات
+            # جلب شحنات وشركات الموظف
             emp_shipments = [s for s in st.session_state['active_shipments'] if s.get('last_status_updater') == u['full_name']]
-            emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s]))
-            emp_comp_str = "، ".join(emp_companies) if emp_companies else "لا توجد شحنات مسجلة بعد"
+            total_ops = len(emp_shipments)
+            emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s and s['company']]))
+            
+            # احتساب التصنيف المئوي
+            if total_ops > 0:
+                ratio = (pts['earned'] / total_ops) * 100.0
+            else:
+                ratio = 0.0
+
+            if ratio < 50.0:
+                rating_category = "يحتاج الى الملاحظة"
+            elif ratio == 50.0:
+                rating_category = "طبيعي"
+            elif 50.0 < ratio <= 75.0:
+                rating_category = "مقبول"
+            elif 75.0 < ratio <= 85.0:
+                rating_category = "جيد"
+            else:
+                rating_category = "مكافح"
 
             raw_eval_list.append({
                 "user_id": u['user_id'],
@@ -1090,33 +1106,37 @@ else:
                 "النقاط المكتسبة": pts['earned'],
                 "الخصومات والتأخير": pts['deducted'],
                 "صافي التقييم": net,
-                "الشركات القائم عليها": emp_comp_str,
-                "ملاحظات التقييم": pts['notes']
+                "إجمالي العمليات": total_ops,
+                "نسبة التقييم": f"{ratio:.1f}%",
+                "التصنيف": rating_category,
+                "عدد الشركات": len(emp_companies),
+                "قائمة الشركات": emp_companies,
+                "ملاحظات المدير": pts['notes']
             })
 
         df_eval = pd.DataFrame(raw_eval_list)
 
-        # تطبيق الفلاتر
+        # تطبيق تصفية الموظف
         if filter_emp != "الكل":
             df_eval = df_eval[df_eval["الموظف"] == filter_emp]
 
+        # تطبيق ترتيب الأداء التفاعلي
         if filter_rank == "الأعلى تقييماً (Top Performers)":
             df_eval = df_eval.sort_values(by="صافي التقييم", ascending=False)
         elif filter_rank == "الأقل تقييماً (Lowest Performers)":
             df_eval = df_eval.sort_values(by="صافي التقييم", ascending=True)
 
-        # إضافة عمود المسلسل # وحذف العمود الأول الضمني
+        # إعادة ترقيم المسلسل #
         df_eval.reset_index(drop=True, inplace=True)
         df_eval.index = df_eval.index + 1
         df_eval.index.name = "#"
-        
-        # عرض الجدول المعدل
+
         st.markdown("#### 📋 جدول التقييم العام للموظفين")
-        display_df = df_eval.drop(columns=["user_id"])
+        display_df = df_eval.drop(columns=["user_id", "قائمة الشركات"])
         st.dataframe(display_df, use_container_width=True)
 
-        # --- تصدير التقارير Excel و PDF ---
-        col_ex1, col_ex2, col_ex3 = st.columns([2, 2, 2])
+        # أزرار التصدير وتحديث التقييم اليدوي وإعادة الضبط
+        col_ex1, col_ex2 = st.columns([2, 2])
         with col_ex1:
             csv_data = display_df.to_csv(index=True).encode('utf-8-sig')
             st.download_button("📥 تصدير التقرير (Excel / CSV)", data=csv_data, file_name="Performance_Report.csv", mime="text/csv", use_container_width=True)
@@ -1124,18 +1144,36 @@ else:
         with col_ex2:
             if st.button("🔄 إعادة التقييمات للوضع السابق", use_container_width=True):
                 st.session_state['user_points'] = {k: v.copy() for k, v in st.session_state['initial_user_points'].items()}
-                st.success("✅ تم إعادة التقييمات والنقاط إلى الوضع السابق بنجاح!")
+                st.success("✅ تم إعادة التقييمات للنظام السابق بنجاح!")
                 st.rerun()
 
         st.write("---")
 
-        # --- الكارت التعريفي المخصص للموظف ---
-        st.markdown("### 💳 الكارت التعريفي الشامل للموظف")
-        selected_card_emp = st.selectbox("اختر الموظف لعرض كارت أنائه والشركات التي عمل عليها:", [u['full_name'] for u in active_users_eval])
+        # --- قسم تعديل نقاط وملاحظات المدير وإصدار الكارت التعريفي ---
+        st.markdown("### 💳 الكارت التعريفي المخصص وإدارة التقييمات")
+        selected_card_emp = st.selectbox("اختر الموظف", [u['full_name'] for u in active_users_eval])
         card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
 
         if card_user_data:
-            # تخصيص ألوان الكارت حسب الاختيار
+            # نموذج تعديل نقاط وملاحظات المدير المباشرة للموظف المختار
+            with st.expander(f"✏️ تعديل نقاط وملاحظات المدير لـ ({selected_card_emp})"):
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                    edit_earned = st.number_input("تعديل النقاط المكتسبة:", min_value=0, value=card_user_data['النقاط المكتسبة'], key=f"e_ear_{card_user_data['user_id']}")
+                    edit_deducted = st.number_input("تعديل الخصومات والتأخيرات:", min_value=0, value=card_user_data['الخصومات والتأخير'], key=f"e_ded_{card_user_data['user_id']}")
+                with col_e2:
+                    edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=100, key=f"e_not_{card_user_data['user_id']}")
+
+                if st.button("💾 حفظ اعتماد تعديل التقييم والمدير", key=f"btn_save_eval_{card_user_data['user_id']}"):
+                    st.session_state['user_points'][card_user_data['user_id']] = {
+                        "earned": edit_earned,
+                        "deducted": edit_deducted,
+                        "notes": edit_admin_notes.strip()
+                    }
+                    st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
+                    st.rerun()
+
+            # ألوان وطابع الكارت التعريفي
             bg_color = "#f8fafc"
             border_color = "#2563eb"
             if card_style == "الحديث الأنيق":
@@ -1149,14 +1187,19 @@ else:
 
             st.markdown(f"""
             <div style="background-color: {bg_color}; border-right: 8px solid {border_color}; padding: 20px; border-radius: 12px; color: {text_color}; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h3 style="margin-0; color: {border_color};">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
+                <h3 style="margin:0; color: {border_color};">📇 {card_user_data['الموظف']} ({card_user_data['المجموعة']})</h3>
                 <hr style="border-color: {border_color};">
-                <p><strong>🏢 الشركات والعملاء المسندة إليه:</strong> {card_user_data['الشركات القائم عليها']}</p>
-                <p><strong>➕ النقاط المكتسبة (+1 عند غلق الملف):</strong> {card_user_data['النقاط المكتسبة']} | <strong>➖ الخصومات:</strong> {card_user_data['الخصومات والتأخير']}</p>
-                <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:{border_color};">{card_user_data['صافي التقييم']} نقطة</span></p>
-                <p><strong>📝 ملاحظات التقييم الميداني:</strong> {card_user_data['ملاحظات التقييم']}</p>
+                <p><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size:26px; font-weight:bold; color:{border_color};">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <strong>"{card_user_data['التصنيف']}"</strong> - بنسبة {card_user_data['نسبة التقييم']})</p>
+                <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
             </div>
             """, unsafe_allow_html=True)
+
+            st.markdown(f"#### 🏢 الشركات والعملاء المسندة للموظف (العدد الكلي: {card_user_data['عدد الشركات']} شركة / عميل):")
+            if card_user_data['قائمة الشركات']:
+                df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
+                st.dataframe(df_comp, use_container_width=True)
+            else:
+                st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
 
     # ---------------------------------------------------------
     # التبويب 7: سجل الحالات
