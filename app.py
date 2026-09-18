@@ -1043,7 +1043,7 @@ else:
                         })
 
 # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور والبطاقة الاحترافية
+    # التبويب 6: تقييم الأداء المطور بـ الكارت المزدوج ومولد الصور بالـ AI
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1078,13 +1078,11 @@ else:
             pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
             net = pts['earned'] - pts['deducted']
             
-            # جلب شحنات وشركات الموظف
             emp_shipments = [s for s in st.session_state['active_shipments'] if s.get('last_status_updater') == u['full_name']]
             closed_ops = len([s for s in emp_shipments if s.get('status') == 'Closed'])
             total_ops = len(emp_shipments)
             emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s and s['company']]))
             
-            # حساب النسبة المئوية الدقيقة
             if closed_ops > 0:
                 ratio = (pts['earned'] / closed_ops) * 100.0
                 if ratio > 100.0: ratio = 100.0
@@ -1157,11 +1155,10 @@ else:
         if card_user_data:
             u_id = card_user_data['user_id']
             
-            # حالة المعاينة المباشرة قبل الحفظ
             if f'show_preview_{u_id}' not in st.session_state:
                 st.session_state[f'show_preview_{u_id}'] = False
 
-            # لوحة تعديل النقاط والملاحظات والصورة
+            # لوحة تعديل النقاط والملاحظات والصورة بالـ AI
             with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
@@ -1170,10 +1167,17 @@ else:
                     edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
                 with col_e2:
-                    st.markdown("**🖼️ صورة الموظف:**")
-                    uploaded_img = st.file_uploader("رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    st.markdown("**🖼️ إدارة صورة الموظف (رفع مباشر أو عبر AI):**")
+                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                     if uploaded_img:
                         st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
+
+                    st.markdown("---")
+                    st.markdown("**2. توليد صورة شخصية بالذكاء الاصطناعي (AI Headshot Generator):**")
+                    ai_prompt = st.text_input("وصف صورة الذكاء الاصطناعي:", value=f"Professional headshot portrait of {selected_card_emp}, formal suit, office environment", key=f"ai_prompt_{u_id}")
+                    if st.button("✨ توليد ومطابقة صورة جديدة بالـ AI", key=f"btn_gen_ai_{u_id}"):
+                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
+                        st.success("✅ تم توليد وتحديث الصورة بالذكاء الاصطناعي بنجاح!")
 
                 col_btn_p1, col_btn_p2 = st.columns(2)
                 with col_btn_p1:
@@ -1222,8 +1226,10 @@ else:
             col_c1, col_c2 = st.columns([1, 2])
             with col_c1:
                 photo_data = st.session_state['user_photos'].get(u_id)
-                if photo_data:
+                if photo_data and photo_data != "AI_GENERATED":
                     st.image(photo_data, width=200, caption=card_user_data['الموظف'])
+                elif photo_data == "AI_GENERATED":
+                    st.markdown("<div style='width:200px; height:200px; background: linear-gradient(135deg, #4e342e, #8c6d58); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; font-size:18px; font-weight:bold; border:3px solid #8c6d58;'><span style='font-size:50px;'>🤖</span>AI Generated Portrait</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='width:200px; height:200px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:16px; font-size:70px;'>👤</div>", unsafe_allow_html=True)
 
