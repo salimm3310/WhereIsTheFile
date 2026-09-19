@@ -408,14 +408,15 @@ else:
     choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
     # ---------------------------------------------------------
-    # التبويب 1: لوحة التحكم الإدارية (Admin Panel)
+    # التبويب 1: لوحة التحكم الإدارية (Admin Panel) - المحدثة بميزة تعديل وحذف الشحنات
     # ---------------------------------------------------------
     if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
         st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
 
-        tab_users_act, tab_user_edit, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
+        tab_users_act, tab_user_edit, tab_ship_admin, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
             "👥 طلبات الحسابات بانتظار الاعتماد",
             "🛠️ إعدادات الحسابات المفعلة والصلاحيات",
+            "📦 إدارة وتعديل وحذف الشحنات (Admin Only)",
             "📨 صندوق البريد وتتبع الواتساب الخارجي",
             "🏆 تقييم الموظفين والتحكم بالنقاط",
             "⏱️ إعدادات المهل SLA"
@@ -504,6 +505,60 @@ else:
                         target_u['status'] = "Disabled"
                         st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
                         st.rerun()
+
+        # --- التبويب الجديد الخاص بإدارة وتعديل وحذف الشحنات للمدير فقط ---
+        with tab_ship_admin:
+            st.markdown("### 📦 لوحة تعديل وحذف الشحنات (صلاحية خاصة بالمدير)")
+            shipments_list = st.session_state['active_shipments']
+            
+            if shipments_list:
+                ship_select_options = {f"ملف: {s['file_num']} - شركة: {s['company']} (الفاتورة: {s['inv']})": s for s in shipments_list}
+                selected_ship_admin_label = st.selectbox("اختر الشحنة المراد تعديلها أو حذفها:", list(ship_select_options.keys()))
+                target_ship = ship_select_options[selected_ship_admin_label]
+
+                with st.form("admin_edit_shipment_form"):
+                    st.markdown(f"#### ✏️ تعديل كافة بيانات الشحنة رقم: **{target_ship['file_num']}**")
+                    col_sh1, col_sh2 = st.columns(2)
+                    
+                    with col_sh1:
+                        adm_file_num = st.text_input("رقم الملف (File Number):", value=target_ship['file_num'])
+                        adm_company = st.text_input("اسم الشركة / العميل:", value=target_ship['company'])
+                        adm_bkg = st.text_input("رقم الحجز (Booking):", value=target_ship['bkg'])
+                    
+                    with col_sh2:
+                        adm_inv = st.text_input("رقم الفاتورة (Invoice):", value=target_ship['inv'])
+                        adm_status = st.selectbox("الحالة التشغيلية الحالية:", [
+                            'Under Operation', 'Waiting BL', 'Draft', 
+                            'Waiting Confirmation', 'Stamped', 
+                            'Ready to be invoiced', 'Closed'
+                        ], index=['Under Operation', 'Waiting BL', 'Draft', 'Waiting Confirmation', 'Stamped', 'Ready to be invoiced', 'Closed'].index(target_ship['status']) if target_ship['status'] in ['Under Operation', 'Waiting BL', 'Draft', 'Waiting Confirmation', 'Stamped', 'Ready to be invoiced', 'Closed'] else 0)
+                        adm_note = st.text_area("الملاحظة الجانبية:", value=target_ship.get('note', ''), height=80)
+
+                    col_sh_b1, col_sh_b2 = st.columns(2)
+                    with col_sh_b1:
+                        save_ship_btn = st.form_submit_button("💾 حفظ تعديلات الشحنة")
+                    with col_sh_b2:
+                        del_ship_btn = st.form_submit_button("🗑️ حذف الشحنة نهائياً من النظام")
+
+                    if save_ship_btn:
+                        target_ship['file_num'] = adm_file_num.strip()
+                        target_ship['company'] = adm_company.strip()
+                        target_ship['bkg'] = adm_bkg.strip()
+                        target_ship['inv'] = adm_inv.strip()
+                        target_ship['status'] = adm_status
+                        target_ship['note'] = adm_note.strip()
+                        target_ship['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        target_ship['last_status_updater'] = user['full_name']
+                        
+                        st.success(f"✅ تم حفظ وتحديث بيانات الشحنة رقم ({adm_file_num}) بنجاح!")
+                        st.rerun()
+
+                    if del_ship_btn:
+                        st.session_state['active_shipments'].remove(target_ship)
+                        st.success(f"🗑️ تم حذف الشحنة رقم ({target_ship['file_num']}) نهائياً من النظام!")
+                        st.rerun()
+            else:
+                st.info("لا توجد شحنات مسجلة بالنظام حالياً لتعديلها أو حذفها.")
 
         with tab_audit:
             st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
