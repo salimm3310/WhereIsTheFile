@@ -39,9 +39,15 @@ st.markdown(f"""
         font-weight: 800 !important;
     }}
     
-    section[data-testid="stSidebar"] div, section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] select, section[data-testid="stSidebar"] option {{
-        font-size: 16px !important;
+    /* تصغير الخط في القائمة الجانبية لضمان إظهار كافة المسميات كاملة وبوضوح */
+    section[data-testid="stSidebar"] div, 
+    section[data-testid="stSidebar"] label, 
+    section[data-testid="stSidebar"] select, 
+    section[data-testid="stSidebar"] option,
+    section[data-testid="stSidebar"] span {{
+        font-size: 15px !important;
         font-weight: 700 !important;
+        line-height: 1.3 !important;
     }}
 
     h1, h2, h3, .main-header {{
@@ -60,10 +66,16 @@ st.markdown(f"""
         margin-bottom: 25px;
     }}
 
-    p, label, span, div, input, select, textarea, button, .stDataFrame, .stSelectbox, .stTextInput {{
+    p, label, span, div, input, select, textarea, button, .stSelectbox, .stTextInput {{
         font-size: 24px !important;
         font-weight: 800 !important;
         color: #020617 !important;
+    }}
+
+    /* تكبير خطوط الجداول والبيانات بدرجتين إضافيتين لسهولة الرؤية */
+    .stDataFrame, .stDataFrame div, .stDataFrame span, .stDataFrame td, .stDataFrame th {{
+        font-size: 26px !important;
+        font-weight: 800 !important;
     }}
 
     .stDataFrame, .stForm, div[data-testid="stExpander"], div[data-testid="stMetricValue"] {{
@@ -133,7 +145,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 2. دوال التشفير والتنظيف
+# 2. دوال التشفير والتنظيف والربط التلقائي
 # =========================================================
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -177,6 +189,10 @@ if 'registered_users' not in st.session_state:
         {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "allowed_pages": ALL_MODULES[1:4], "status": "Active"}
     ]
 
+# دالة مساعدة سريعة لجلب الموظفين المفعلين فقط لربط البيانات آلياً
+def get_active_users():
+    return [u for u in st.session_state['registered_users'] if u.get('status') == 'Active']
+
 if 'official_signature' not in st.session_state:
     st.session_state['official_signature'] = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
 
@@ -213,7 +229,6 @@ if 'whatsapp_logs' not in st.session_state:
         {"sender": "أحمد علي", "target_name": "شركة CFA Global", "phone": "201012345678", "text": "تنبيه: تم رفع بوليصة الشحن بانتظار الاعتماد", "time": "2026-09-18 11:45:00"}
     ]
 
-# أرشيف وقاعدة سجل الحالات التاريخية
 if 'status_audit_logs' not in st.session_state:
     st.session_state['status_audit_logs'] = [
         {"ID": 101, "رقم الملف": "260862115", "الشركة": "U.S.C", "الفاتورة": "3A - 3B", "الحالة السابقة": "Draft", "الحالة الجديدة": "Under Operation", "الموظف المحدث": "Mohamed Salem", "التاريخ والوقت": "2026-09-18 10:00:00", "ملاحظات": "تحديث تشغيلي عادي"},
@@ -428,12 +443,12 @@ else:
     choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
     # ---------------------------------------------------------
-    # التبويب 1: لوحة التحكم الإدارية (Admin Panel)
+    # التبويب 1: لوحة التحكم الإدارية (قائمة منسدلة أنيقة)
     # ---------------------------------------------------------
     if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
         st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
 
-        tab_users_act, tab_user_edit, tab_ship_admin, tab_sig_cfg, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
+        admin_options = [
             "👥 طلبات الحسابات بانتظار الاعتماد",
             "🛠️ إعدادات الحسابات المفعلة والصلاحيات",
             "📦 إدارة وتعديل وحذف الشحنات",
@@ -441,9 +456,12 @@ else:
             "📨 صندوق البريد وتتبع الواتساب",
             "🏆 تقييم الموظفين والتحكم بالنقاط",
             "⏱️ إعدادات المهل SLA"
-        ])
+        ]
+        
+        selected_admin_task = st.selectbox("📌 اختر المهمة الإدارية المراد الوصول إليها:", admin_options)
+        st.write("---")
 
-        with tab_users_act:
+        if selected_admin_task == "👥 طلبات الحسابات بانتظار الاعتماد":
             st.markdown("### 👥 طلبات الحسابات بانتظار الاعتماد وتحديد الصلاحيات")
             pending_list = [u for u in st.session_state['registered_users'] if u['status'] == "Pending"]
             
@@ -478,11 +496,10 @@ else:
             else:
                 st.success("✅ لا توجد طلبات حسابات جديدة بانتظار الاعتماد حالياً.")
 
-        with tab_user_edit:
+        elif selected_admin_task == "🛠️ إعدادات الحسابات المفعلة والصلاحيات":
             st.markdown("### 🛠️ إدارة الحسابات المفعلة (تعديل / حذف / إعادة ضبط المرور)")
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+            active_users = get_active_users()
             
-            # تجهيز بيانات الجدول بوضع ID كأول عمود وبدون كشف التسلسل الافتراضي
             df_users_display = pd.DataFrame([{
                 "ID": u['user_id'],
                 "الاسم بالكامل": u['full_name'],
@@ -495,52 +512,52 @@ else:
             st.write("---")
 
             user_options = {f"ID: #{u['user_id']} - {u['full_name']} ({u['phone_number']})": u for u in active_users}
-            selected_u_label = st.selectbox("اختر الحساب المراد إدارته وتعديله:", list(user_options.keys()))
-            target_u = user_options[selected_u_label]
+            if user_options:
+                selected_u_label = st.selectbox("اختر الحساب المراد إدارته وتعديله:", list(user_options.keys()))
+                target_u = user_options[selected_u_label]
 
-            with st.form("edit_user_form"):
-                st.markdown(f"#### ✏️ تعديل بيانات الحساب: **{target_u['full_name']}** (ID: #{target_u['user_id']})")
-                col_e1, col_e2 = st.columns(2)
-                with col_e1:
-                    edit_name = st.text_input("اسم المستخدم / الموظف:", value=target_u['full_name'])
-                    edit_phone = st.text_input("رقم الهاتف (اسم الدخول):", value=target_u['phone_number'])
-                    edit_pass = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
-                
-                with col_e2:
-                    edit_group = st.selectbox("المجموعة الصلاحية:", ["OPS", "Sys 1", "Sys 2", "Admin"], index=["OPS", "Sys 1", "Sys 2", "Admin"].index(target_u['role_group']) if target_u['role_group'] in ["OPS", "Sys 1", "Sys 2", "Admin"] else 0)
-                    st.markdown("**صلاحيات الشاشات واللوحات المسموحة:**")
-                    edit_pages = []
-                    for module in ALL_MODULES:
-                        is_checked = module in target_u.get('allowed_pages', ALL_MODULES)
-                        if st.checkbox(module, value=is_checked, key=f"edit_p_{target_u['user_id']}_{module}"):
-                            edit_pages.append(module)
+                with st.form("edit_user_form"):
+                    st.markdown(f"#### ✏️ تعديل بيانات الحساب: **{target_u['full_name']}** (ID: #{target_u['user_id']})")
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        edit_name = st.text_input("اسم المستخدم / الموظف:", value=target_u['full_name'])
+                        edit_phone = st.text_input("رقم الهاتف (اسم الدخول):", value=target_u['phone_number'])
+                        edit_pass = st.text_input("كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير):", type="password")
+                    
+                    with col_e2:
+                        edit_group = st.selectbox("المجموعة الصلاحية:", ["OPS", "Sys 1", "Sys 2", "Admin"], index=["OPS", "Sys 1", "Sys 2", "Admin"].index(target_u['role_group']) if target_u['role_group'] in ["OPS", "Sys 1", "Sys 2", "Admin"] else 0)
+                        st.markdown("**صلاحيات الشاشات واللوحات المسموحة:**")
+                        edit_pages = []
+                        for module in ALL_MODULES:
+                            is_checked = module in target_u.get('allowed_pages', ALL_MODULES)
+                            if st.checkbox(module, value=is_checked, key=f"edit_p_{target_u['user_id']}_{module}"):
+                                edit_pages.append(module)
 
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    save_u_btn = st.form_submit_button("💾 حفظ التعديلات")
-                with col_btn2:
-                    del_u_btn = st.form_submit_button("🗑️ حذف وتجميد الحساب")
+                    col_btn1, col_btn2 = st.columns(2)
+                    with col_btn1:
+                        save_u_btn = st.form_submit_button("💾 حفظ التعديلات")
+                    with col_btn2:
+                        del_u_btn = st.form_submit_button("🗑️ حذف وتجميد الحساب")
 
-                if save_u_btn:
-                    target_u['full_name'] = edit_name.strip()
-                    target_u['phone_number'] = edit_phone.strip()
-                    if edit_pass.strip() != "":
-                        target_u['password_hash'] = make_hashes(edit_pass.strip())
-                    target_u['role_group'] = edit_group
-                    target_u['allowed_pages'] = edit_pages
-                    st.success(f"✅ تم تحديث بيانات وصلاحيات الحساب ({edit_name}) بنجاح!")
-                    st.rerun()
-
-                if del_u_btn:
-                    if target_u['user_id'] == MAIN_ADMIN['user_id']:
-                        st.error("❌ لا يمكن حذف الحساب الرئيسي للمدير (Mohamed Salem).")
-                    else:
-                        target_u['status'] = "Disabled"
-                        st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
+                    if save_u_btn:
+                        target_u['full_name'] = edit_name.strip()
+                        target_u['phone_number'] = edit_phone.strip()
+                        if edit_pass.strip() != "":
+                            target_u['password_hash'] = make_hashes(edit_pass.strip())
+                        target_u['role_group'] = edit_group
+                        target_u['allowed_pages'] = edit_pages
+                        st.success(f"✅ تم تحديث بيانات وصلاحيات الحساب ({edit_name}) بنجاح!")
                         st.rerun()
 
-        # --- تبويب الحذف الجماعي والتعديل للشحنات ---
-        with tab_ship_admin:
+                    if del_u_btn:
+                        if target_u['user_id'] == MAIN_ADMIN['user_id']:
+                            st.error("❌ لا يمكن حذف الحساب الرئيسي للمدير (Mohamed Salem).")
+                        else:
+                            target_u['status'] = "Disabled"
+                            st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح واستبعاده تلقائياً من كافة الشاشات!")
+                            st.rerun()
+
+        elif selected_admin_task == "📦 إدارة وتعديل وحذف الشحنات":
             st.markdown("### 📦 لوحة الحذف الجماعي والتعديل للشحنات (Admin Only)")
             shipments_list = st.session_state['active_shipments']
             
@@ -610,8 +627,7 @@ else:
             else:
                 st.info("لا توجد شحنات مسجلة بالنظام حالياً لتعديلها أو حذفها.")
 
-        # --- تبويب التحكم وتعديل صيغة التوقيع الرسمي (خاص بالمدير فقط) ---
-        with tab_sig_cfg:
+        elif selected_admin_task == "✍️ إعداد وتعديل التوقيع الرسمي":
             st.markdown("### ✍️ التحكم وتعديل صيغة التوقيع الرسمي (صلاحية خاصة بالمدير)")
             st.info("💡 النص المكتوب هنا يمثل التوقيع الرسمي المعتمد الذي سيتم إلحاقه آلياً وبشكل إجباري بكافة رسائل النظام والواتساب الخارجي.")
             
@@ -631,89 +647,92 @@ else:
                     else:
                         st.error("⚠️ لا يمكن ترك صيغة التوقيع فارغة.")
 
-        with tab_audit:
-            st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+        elif selected_admin_task == "📨 صندوق البريد وتتبع الواتساب":
+            st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم مفعل")
+            active_users = get_active_users()
             aud_user_options = {f"ID: #{u['user_id']} - {u['full_name']}": u for u in active_users}
-            selected_aud_label = st.selectbox("اختر المستخدم لعرض سجله الخاص:", list(aud_user_options.keys()))
-            aud_u = aud_user_options[selected_aud_label]
+            
+            if aud_user_options:
+                selected_aud_label = st.selectbox("اختر المستخدم لعرض سجله الخاص:", list(aud_user_options.keys()))
+                aud_u = aud_user_options[selected_aud_label]
 
-            col_aud1, col_aud2 = st.columns(2)
+                col_aud1, col_aud2 = st.columns(2)
 
-            with col_aud1:
-                st.markdown(f"#### 📬 صندوق البريد والرسائل الداخلية لـ ({aud_u['full_name']})")
-                user_msgs = [m for m in st.session_state['internal_messages'] if aud_u['full_name'] in m.get('sender', '') or aud_u['full_name'] in m.get('recipient', '')]
-                if user_msgs:
-                    for m in user_msgs:
-                        st.markdown(f"""
-                        <div class="chat-bubble-in">
-                            <strong>من: {m.get('sender', 'غير معروف')} ➔ إلى: {m.get('recipient', 'الجميع')}</strong><br>
-                            <span>{m.get('text', '')}</span><br>
-                            <small style='color:#64748b;'>📅 {m.get('time', '')}</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد رسائل داخلية مسجلة لهذا المستخدم.")
+                with col_aud1:
+                    st.markdown(f"#### 📬 صندوق البريد والرسائل الداخلية لـ ({aud_u['full_name']})")
+                    user_msgs = [m for m in st.session_state['internal_messages'] if aud_u['full_name'] in m.get('sender', '') or aud_u['full_name'] in m.get('recipient', '')]
+                    if user_msgs:
+                        for m in user_msgs:
+                            st.markdown(f"""
+                            <div class="chat-bubble-in">
+                                <strong>من: {m.get('sender', 'غير معروف')} ➔ إلى: {m.get('recipient', 'الجميع')}</strong><br>
+                                <span>{m.get('text', '')}</span><br>
+                                <small style='color:#64748b;'>📅 {m.get('time', '')}</small>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.info("لا توجد رسائل داخلية مسجلة لهذا المستخدم.")
 
-            with col_aud2:
-                st.markdown(f"#### 📱 الأرقام والمراسلات الخارجية عبر (WhatsApp) لـ ({aud_u['full_name']})")
-                user_wa = [w for w in st.session_state['whatsapp_logs'] if aud_u['full_name'] in w.get('sender', '')]
-                if user_wa:
-                    for w in user_wa:
-                        st.markdown(f"""
-                        <div class="chat-bubble-in" style="border-right: 6px solid #16a34a;">
-                            <strong>المستلم: {w.get('target_name', 'غير معروف')} (+{w.get('phone', '')})</strong><br>
-                            <span>{w.get('text', '')}</span><br>
-                            <small style='color:#64748b;'>📅 {w.get('time', '')}</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("لا توجد مراسلات واتساب مسجلة لهذا المستخدم.")
+                with col_aud2:
+                    st.markdown(f"#### 📱 الأرقام والمراسلات الخارجية عبر (WhatsApp) لـ ({aud_u['full_name']})")
+                    user_wa = [w for w in st.session_state['whatsapp_logs'] if aud_u['full_name'] in w.get('sender', '')]
+                    if user_wa:
+                        for w in user_wa:
+                            st.markdown(f"""
+                            <div class="chat-bubble-in" style="border-right: 6px solid #16a34a;">
+                                <strong>المستلم: {w.get('target_name', 'غير معروف')} (+{w.get('phone', '')})</strong><br>
+                                <span>{w.get('text', '')}</span><br>
+                                <small style='color:#64748b;'>📅 {w.get('time', '')}</small>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.info("لا توجد مراسلات واتساب مسجلة لهذا المستخدم.")
 
-        with tab_points_eval:
+        elif selected_admin_task == "🏆 تقييم الموظفين والتحكم بالنقاط":
             st.markdown("### 🏆 التحكم بنقاط تقييم الموظفين والتحليل العام للأداء")
             
-            active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+            active_users = get_active_users()
             eval_user_options = {f"ID: #{u['user_id']} - {u['full_name']}": u for u in active_users}
-            selected_eval_label = st.selectbox("اختر الموظف لإدارة نقاطه وتحليل أنائه:", list(eval_user_options.keys()))
-            eval_u = eval_user_options[selected_eval_label]
+            if eval_user_options:
+                selected_eval_label = st.selectbox("اختر الموظف لإدارة نقاطه وتحليل أنائه:", list(eval_user_options.keys()))
+                eval_u = eval_user_options[selected_eval_label]
 
-            u_p_data = st.session_state['user_points'].get(eval_u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
+                u_p_data = st.session_state['user_points'].get(eval_u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
 
-            col_p_act1, col_p_act2 = st.columns([2, 3])
+                col_p_act1, col_p_act2 = st.columns([2, 3])
 
-            with col_p_act1:
-                st.markdown(f"#### ✏️ تعديل النقاط يدويًا لـ **{eval_u['full_name']}**")
-                new_earned = st.number_input("النقاط المكتسبة (+1 عند غلق الملف):", min_value=0, value=u_p_data['earned'])
-                new_deducted = st.number_input("الخصومات والتأخيرات (-1):", min_value=0, value=u_p_data['deducted'])
-                p_notes = st.text_area("سبب تعديل التقييم / الملاحظات:", value=u_p_data['notes'], height=80)
+                with col_p_act1:
+                    st.markdown(f"#### ✏️ تعديل النقاط يدويًا لـ **{eval_u['full_name']}**")
+                    new_earned = st.number_input("النقاط المكتسبة (+1 عند غلق الملف):", min_value=0, value=u_p_data['earned'])
+                    new_deducted = st.number_input("الخصومات والتأخيرات (-1):", min_value=0, value=u_p_data['deducted'])
+                    p_notes = st.text_area("سبب تعديل التقييم / الملاحظات:", value=u_p_data['notes'], height=80)
 
-                if st.button("💾 حفظ تعديل النقاط والتقييم"):
-                    st.session_state['user_points'][eval_u['user_id']] = {
-                        "earned": new_earned,
-                        "deducted": new_deducted,
-                        "notes": p_notes.strip()
-                    }
-                    st.success("✅ تم تحديث التقييم والنقاط المكتسبة بنجاح!")
-                    st.rerun()
+                    if st.button("💾 حفظ تعديل النقاط والتقييم"):
+                        st.session_state['user_points'][eval_u['user_id']] = {
+                            "earned": new_earned,
+                            "deducted": new_deducted,
+                            "notes": p_notes.strip()
+                        }
+                        st.success("✅ تم تحديث التقييم والنقاط المكتسبة بنجاح!")
+                        st.rerun()
 
-            with col_p_act2:
-                st.markdown(f"#### 📊 التحليل العام والتقييم النهائي لـ **{eval_u['full_name']}**")
-                net_pts = new_earned - new_deducted
-                
-                m1, m2, m3 = st.columns(3)
-                m1.metric("➕ المكتسبة", f"{new_earned} نقطة")
-                m2.metric("➖ الخصومات", f"{new_deducted} نقطة")
-                m3.metric("🏆 صافي النقاط", f"{net_pts} نقطة")
+                with col_p_act2:
+                    st.markdown(f"#### 📊 التحليل العام والتقييم النهائي لـ **{eval_u['full_name']}**")
+                    net_pts = new_earned - new_deducted
+                    
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("➕ المكتسبة", f"{new_earned} نقطة")
+                    m2.metric("➖ الخصومات", f"{new_deducted} نقطة")
+                    m3.metric("🏆 صافي النقاط", f"{net_pts} نقطة")
 
-                df_eval_chart = pd.DataFrame([
-                    {"مؤشر": "النقاط المكتسبة", "العدد": new_earned},
-                    {"مؤشر": "الخصومات والتأخير", "العدد": new_deducted}
-                ])
-                fig_eval = px.bar(df_eval_chart, x="مؤشر", y="العدد", color="مؤشر", text_auto=True, title=f"تحليل التقييم والتزام الموظف ({eval_u['full_name']})")
-                st.plotly_chart(fig_eval, use_container_width=True)
+                    df_eval_chart = pd.DataFrame([
+                        {"مؤشر": "النقاط المكتسبة", "العدد": new_earned},
+                        {"مؤشر": "الخصومات والتأخير", "العدد": new_deducted}
+                    ])
+                    fig_eval = px.bar(df_eval_chart, x="مؤشر", y="العدد", color="مؤشر", text_auto=True, title=f"تحليل التقييم والتزام الموظف ({eval_u['full_name']})")
+                    st.plotly_chart(fig_eval, use_container_width=True)
 
-        with tab_sla_cfg:
+        elif selected_admin_task == "⏱️ إعدادات المهل SLA":
             st.markdown("### ⏱️ اعتماد التوقيتات والمهل الزمنية المتغيرة (SLA Configuration)")
             st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
 
@@ -732,7 +751,7 @@ else:
                 st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
 
     # ---------------------------------------------------------
-    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة
+    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة (ربط تلقائي بالموظفين المفعلين)
     # ---------------------------------------------------------
     elif choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
@@ -749,7 +768,8 @@ else:
         st.markdown("#### 🔍 لوحة تصفية وبحث محددات التحليل")
         col_f1, col_f2 = st.columns(2)
 
-        active_users_names = [u['full_name'] for u in st.session_state['registered_users'] if u['status'] == 'Active']
+        # الربط التلقائي بأجهزة المستخدمين المفعلين فقط
+        active_users_names = [u['full_name'] for u in get_active_users()]
 
         with col_f1:
             all_employees = ["كل الموظفين (الشامل)"] + sorted(active_users_names)
@@ -860,7 +880,7 @@ else:
             st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
     # ---------------------------------------------------------
-    # التبويب 3: إدارة الحالات والتتبع
+    # التبويب 3: إدارة الحالات والتتبع (محدث للتحديث والملاحظات الجماعية)
     # ---------------------------------------------------------
     elif choice == "🔄 إدارة الحالات والتتبع (Lifecycle & SLA)":
         st.subheader("🔄 شاشة إدارة الحالات وتتبع المهل الزمنية (SLA & Lifecycle)")
@@ -890,58 +910,49 @@ else:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
         st.write("---")
-        st.markdown("### 🛠️ تحديث الحالة وإضافة الملاحظة")
+        st.markdown("### 🛠️ تحديث الحالات وإضافة الملاحظات (فردي وجماعي)")
 
-        shipment_map = {f"ID: #{r['id']} | ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r['id'] for r in rows}
-        shipment_labels = list(shipment_map.keys())
+        # خيار التحديث الجماعي أو الفردي
+        update_mode = st.radio("اختر نمط التحديث:", ["تحديث فردي لشحنة واحدة", "تحديث جماعي لأكثر من شحنة"], horizontal=True)
 
-        default_idx = 0
-        if st.session_state['selected_shipment_id']:
-            for idx, label in enumerate(shipment_labels):
-                if shipment_map[label] == st.session_state['selected_shipment_id']:
-                    default_idx = idx
-                    break
+        all_statuses = [
+            'Under Operation', 'Waiting BL', 'Draft', 
+            'Waiting Confirmation', 'Stamped', 
+            'Ready to be invoiced', 'Closed'
+        ]
 
-        selected_label = st.selectbox("اختر الشحنة:", shipment_labels, index=default_idx)
-        selected_id = shipment_map[selected_label]
-        st.session_state['selected_shipment_id'] = selected_id
+        if update_mode == "تحديث جماعي لأكثر من شحنة":
+            shipment_map_multi = {f"ID: #{r['id']} | ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
+            selected_multi_labels = st.multiselect("اختر الشحنات المراد تحديثها معاً:", list(shipment_map_multi.keys()))
 
-        s_data = next((item for item in rows if item['id'] == selected_id), None)
+            if selected_multi_labels:
+                col_b_st, col_b_nt = st.columns(2)
+                with col_b_st:
+                    new_bulk_status = st.selectbox("الحالة الجديدة الموحدة للشحنات المحددة:", all_statuses)
+                    set_bulk_hold = st.checkbox("تفعيل تعليق الشحنات المحددة (Put on Hold)", value=False)
+                    bulk_hold_reason = ""
+                    if set_bulk_hold:
+                        bulk_hold_reason = st.text_input("سبب التعليق الموحد:")
 
-        if s_data:
-            col_status_change, col_notes = st.columns([2, 2])
+                with col_b_nt:
+                    bulk_note_text = st.text_area("ملاحظة موحدة للشحنات المحددة (اختياري):", height=120)
 
-            with col_status_change:
-                st.markdown("**تغيير الحالة**")
-                all_statuses = [
-                    'Under Operation', 'Waiting BL', 'Draft', 
-                    'Waiting Confirmation', 'Stamped', 
-                    'Ready to be invoiced', 'Closed'
-                ]
-                
-                curr_st = s_data['status']
-                new_selected_status = st.selectbox("الحالة الجديدة:", all_statuses, index=all_statuses.index(curr_st) if curr_st in all_statuses else 0)
-                set_hold = st.checkbox("تفعيل تعليق الشحنة (Put on Hold)", value=bool(s_data['holded']))
-                hold_reason_text = ""
-                if set_hold:
-                    hold_reason_text = st.text_input("سبب التعليق:", value=s_data['h_reason'] if s_data['h_reason'] else "")
-
-                save_clicked = st.button("💾 حفظ التعديل", key="save_status_btn")
-                
-                if save_clicked:
-                    if set_hold and hold_reason_text.strip() == "":
-                        st.error("⚠️ يرجى كتابة سبب التعليق عند تفعيل خيار Hold.")
-                    else:
+                if st.button(f"💾 حفظ التحديث الموحد لـ ({len(selected_multi_labels)}) شحنة"):
+                    selected_target_ships = [shipment_map_multi[lbl] for label in selected_multi_labels for lbl in [label] if lbl in shipment_map_multi]
+                    
+                    for s_data in selected_target_ships:
                         was_not_closed = (s_data['status'] != 'Closed')
                         prev_st_val = s_data['status']
                         
-                        s_data['status'] = new_selected_status
-                        s_data['holded'] = 1 if set_hold else 0
-                        s_data['h_reason'] = hold_reason_text.strip() if set_hold else ""
+                        s_data['status'] = new_bulk_status
+                        s_data['holded'] = 1 if set_bulk_hold else 0
+                        s_data['h_reason'] = bulk_hold_reason.strip() if set_bulk_hold else ""
                         s_data['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         s_data['last_status_updater'] = user['full_name']
+                        if bulk_note_text.strip() != "":
+                            s_data['note'] = bulk_note_text.strip()
 
-                        # إضافة السجل تلقائياً لأرشيف سجل الحالات والتدقيق
+                        # إضافة سجل للتدقيق
                         new_log_id = max([log['ID'] for log in st.session_state['status_audit_logs']]) + 1 if st.session_state['status_audit_logs'] else 101
                         st.session_state['status_audit_logs'].append({
                             "ID": new_log_id,
@@ -949,39 +960,105 @@ else:
                             "الشركة": s_data['company'],
                             "الفاتورة": s_data['inv'],
                             "الحالة السابقة": prev_st_val,
-                            "الحالة الجديدة": new_selected_status,
+                            "الحالة الجديدة": new_bulk_status,
                             "الموظف المحدث": user['full_name'],
                             "التاريخ والوقت": s_data['last_up'],
-                            "ملاحظات": f"تعديل بواسطة {user['full_name']}"
+                            "ملاحظات": f"تحديث جماعي بواسطة {user['full_name']}"
                         })
 
-                        if new_selected_status == 'Closed' and was_not_closed:
+                        if new_bulk_status == 'Closed' and was_not_closed:
                             u_pts = st.session_state['user_points'].get(user['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
                             u_pts['earned'] += 1
                             u_pts['notes'] = f"إغلاق الملف رقم {s_data['file_num']}"
                             st.session_state['user_points'][user['user_id']] = u_pts
 
-                        update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
-                        execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
+                    st.success(f"🎉 تم تحديث ({len(selected_multi_labels)}) شحنة بنجاح!")
+                    st.rerun()
 
-                        st.success(f"✅ تم حفظ تعديل حالة الملف ({s_data['file_num']}) بنجاح وتوثيقه بسجل الحالات!")
-                        st.rerun()
+        else:
+            shipment_map = {f"ID: #{r['id']} | ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r['id'] for r in rows}
+            shipment_labels = list(shipment_map.keys())
 
-            with col_notes:
-                st.markdown("**ملاحظة**")
-                new_note = st.text_area("الملاحظة التوضيحية:", height=110, value="")
-                if st.button("📝 إضافة الملاحظة", key="add_note_btn"):
-                    if new_note.strip() != "":
-                        s_data['note'] = new_note.strip()
-                        note_sql = "INSERT INTO shipment_notes (shipment_id, added_by_user, note_content) VALUES (?, ?, ?)"
-                        execute_query(note_sql, (s_data['id'], user['user_id'], new_note.strip()))
-                        st.success("✅ تم حفظ الملاحظة بنجاح.")
-                        st.rerun()
-                    else:
-                        st.warning("يرجى كتابة نص الملاحظة قبل الحفظ.")
+            default_idx = 0
+            if st.session_state['selected_shipment_id']:
+                for idx, label in enumerate(shipment_labels):
+                    if shipment_map[label] == st.session_state['selected_shipment_id']:
+                        default_idx = idx
+                        break
+
+            selected_label = st.selectbox("اختر الشحنة:", shipment_labels, index=default_idx)
+            selected_id = shipment_map[selected_label]
+            st.session_state['selected_shipment_id'] = selected_id
+
+            s_data = next((item for item in rows if item['id'] == selected_id), None)
+
+            if s_data:
+                col_status_change, col_notes = st.columns([2, 2])
+
+                with col_status_change:
+                    st.markdown("**تغيير الحالة**")
+                    curr_st = s_data['status']
+                    new_selected_status = st.selectbox("الحالة الجديدة:", all_statuses, index=all_statuses.index(curr_st) if curr_st in all_statuses else 0)
+                    set_hold = st.checkbox("تفعيل تعليق الشحنة (Put on Hold)", value=bool(s_data['holded']))
+                    hold_reason_text = ""
+                    if set_hold:
+                        hold_reason_text = st.text_input("سبب التعليق:", value=s_data['h_reason'] if s_data['h_reason'] else "")
+
+                    save_clicked = st.button("💾 حفظ التعديل", key="save_status_btn")
+                    
+                    if save_clicked:
+                        if set_hold and hold_reason_text.strip() == "":
+                            st.error("⚠️ يرجى كتابة سبب التعليق عند تفعيل خيار Hold.")
+                        else:
+                            was_not_closed = (s_data['status'] != 'Closed')
+                            prev_st_val = s_data['status']
+                            
+                            s_data['status'] = new_selected_status
+                            s_data['holded'] = 1 if set_hold else 0
+                            s_data['h_reason'] = hold_reason_text.strip() if set_hold else ""
+                            s_data['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            s_data['last_status_updater'] = user['full_name']
+
+                            new_log_id = max([log['ID'] for log in st.session_state['status_audit_logs']]) + 1 if st.session_state['status_audit_logs'] else 101
+                            st.session_state['status_audit_logs'].append({
+                                "ID": new_log_id,
+                                "رقم الملف": s_data['file_num'],
+                                "الشركة": s_data['company'],
+                                "الفاتورة": s_data['inv'],
+                                "الحالة السابقة": prev_st_val,
+                                "الحالة الجديدة": new_selected_status,
+                                "الموظف المحدث": user['full_name'],
+                                "التاريخ والوقت": s_data['last_up'],
+                                "ملاحظات": f"تعديل بواسطة {user['full_name']}"
+                            })
+
+                            if new_selected_status == 'Closed' and was_not_closed:
+                                u_pts = st.session_state['user_points'].get(user['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
+                                u_pts['earned'] += 1
+                                u_pts['notes'] = f"إغلاق الملف رقم {s_data['file_num']}"
+                                st.session_state['user_points'][user['user_id']] = u_pts
+
+                            update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
+                            execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
+
+                            st.success(f"✅ تم حفظ تعديل حالة الملف ({s_data['file_num']}) بنجاح وتوثيقه بسجل الحالات!")
+                            st.rerun()
+
+                with col_notes:
+                    st.markdown("**ملاحظة**")
+                    new_note = st.text_area("الملاحظة التوضيحية:", height=110, value="")
+                    if st.button("📝 إضافة الملاحظة", key="add_note_btn"):
+                        if new_note.strip() != "":
+                            s_data['note'] = new_note.strip()
+                            note_sql = "INSERT INTO shipment_notes (shipment_id, added_by_user, note_content) VALUES (?, ?, ?)"
+                            execute_query(note_sql, (s_data['id'], user['user_id'], new_note.strip()))
+                            st.success("✅ تم حفظ الملاحظة بنجاح.")
+                            st.rerun()
+                        else:
+                            st.warning("يرجى كتابة نص الملاحظة قبل الحفظ.")
 
     # ---------------------------------------------------------
-    # التبويب 4: اضف الشحنة
+    # التبويب 4: اضف الشحنة (أزرار موحدة المظهر)
     # ---------------------------------------------------------
     elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
         st.subheader("اضف الشحنة")
@@ -1032,6 +1109,7 @@ else:
                 bkg_num = st.text_input("رقم الحجز (Booking Number)", value=parsed['booking_number'])
                 item_desc = st.text_area("وصف البضاعة", value=parsed['item_description'], height=100)
 
+            # زر بنفس الحجم والستايل البارز لسهولة الرؤية
             submit_btn = st.form_submit_button("اضف الشحنة")
 
             if submit_btn:
@@ -1054,7 +1132,6 @@ else:
                     }
                     st.session_state['active_shipments'].append(new_item)
                     
-                    # تسجيل الإضافة بسجل الحالات
                     new_log_id = max([log['ID'] for log in st.session_state['status_audit_logs']]) + 1 if st.session_state['status_audit_logs'] else 101
                     st.session_state['status_audit_logs'].append({
                         "ID": new_log_id,
@@ -1070,7 +1147,7 @@ else:
                     st.success(f"🎉 تم إضافة الشحنة (ID: #{new_id} - ملف: {file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 5: المراسلات والواتساب
+    # التبويب 5: المراسلات والواتساب (ربط تلقائي بالنشطين)
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("المراسالات")
@@ -1078,49 +1155,50 @@ else:
         tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "WhatsApp"])
 
         CURRENT_OFFICIAL_SIGNATURE = st.session_state['official_signature']
+        active_users_list = get_active_users()
 
         with tab_msg:
             col_send, col_inbox = st.columns([2, 3])
             with col_send:
                 st.markdown("### 📤 إرسال رسالة داخلية")
-                active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
                 emp_map = {f"ID: #{u['user_id']} - {u['full_name']} ({u['role_group']})": u for u in active_users_list}
-                target_emp_label = st.selectbox("إلى المستخدم / الفريق:", list(emp_map.keys()))
-                target_emp_obj = emp_map[target_emp_label]
+                if emp_map:
+                    target_emp_label = st.selectbox("إلى المستخدم / الفريق:", list(emp_map.keys()))
+                    target_emp_obj = emp_map[target_emp_label]
 
-                msg_type = st.radio("نوع الرسالة الداخلية:", ["رسالة عادية", "تنبيه/تحديث لشحنة محددة"], horizontal=True)
+                    msg_type = st.radio("نوع الرسالة الداخلية:", ["رسالة عادية", "تنبيه/تحديث لشحنة محددة"], horizontal=True)
 
-                if msg_type == "تنبيه/تحديث لشحنة محددة":
-                    rows = st.session_state['active_shipments']
-                    ship_map = {f"ID: #{r['id']} - ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
-                    selected_s_label = st.selectbox("اختر الشحنة المراد التنبيه عليها:", list(ship_map.keys()))
-                    selected_s = ship_map[selected_s_label]
+                    if msg_type == "تنبيه/تحديث لشحنة محددة":
+                        rows = st.session_state['active_shipments']
+                        ship_map = {f"ID: #{r['id']} - ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
+                        selected_s_label = st.selectbox("اختر الشحنة المراد التنبيه عليها:", list(ship_map.keys()))
+                        selected_s = ship_map[selected_s_label]
 
-                    dynamic_body = (
-                        f"مرحباً أستاذ/ة {target_emp_obj['full_name']}\n\n"
-                        f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
-                        f"📂 رقم الملف: {selected_s['file_num']}\n"
-                        f"🔖 اسم الشركة: {selected_s['company']}\n"
-                        f"🧾 رقم الفاتورة: {selected_s['inv']}\n"
-                        f"📌 الحالة الحالية: {selected_s['status']}"
-                    )
-                    user_editable_text = st.text_area("نص التحديث التوضيحي:", value=dynamic_body, height=160)
-                else:
-                    user_editable_text = st.text_area("نص الرسالة الداخلية:", height=120)
+                        dynamic_body = (
+                            f"مرحباً أستاذ/ة {target_emp_obj['full_name']}\n\n"
+                            f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
+                            f"📂 رقم الملف: {selected_s['file_num']}\n"
+                            f"🔖 اسم الشركة: {selected_s['company']}\n"
+                            f"🧾 رقم الفاتورة: {selected_s['inv']}\n"
+                            f"📌 الحالة الحالية: {selected_s['status']}"
+                        )
+                        user_editable_text = st.text_area("نص التحديث التوضيحي:", value=dynamic_body, height=160)
+                    else:
+                        user_editable_text = st.text_area("نص الرسالة الداخلية:", height=120)
 
-                st.info(f"🔒 التوقيع الإداري الرسمي المدمج إجبارياً:\n\n{CURRENT_OFFICIAL_SIGNATURE}")
+                    st.info(f"🔒 التوقيع الإداري الرسمي المدمج إجبارياً:\n\n{CURRENT_OFFICIAL_SIGNATURE}")
 
-                if st.button("🚀 إرسال الرسالة الداخلية"):
-                    if user_editable_text.strip() != "":
-                        full_final_msg = f"{user_editable_text.strip()}\n\n{CURRENT_OFFICIAL_SIGNATURE}"
-                        st.session_state['internal_messages'].append({
-                            "sender": user['full_name'],
-                            "recipient": target_emp_label,
-                            "text": full_final_msg,
-                            "time": datetime.now().strftime('%H:%M %p')
-                        })
-                        st.success("✅ تم إرسال الرسالة مع التوقيع الإداري المثبت بنجاح!")
-                        st.rerun()
+                    if st.button("🚀 إرسال الرسالة الداخلية"):
+                        if user_editable_text.strip() != "":
+                            full_final_msg = f"{user_editable_text.strip()}\n\n{CURRENT_OFFICIAL_SIGNATURE}"
+                            st.session_state['internal_messages'].append({
+                                "sender": user['full_name'],
+                                "recipient": target_emp_label,
+                                "text": full_final_msg,
+                                "time": datetime.now().strftime('%H:%M %p')
+                            })
+                            st.success("✅ تم إرسال الرسالة مع التوقيع الإداري المثبت بنجاح!")
+                            st.rerun()
 
             with col_inbox:
                 st.markdown("### 📥 صندوق الرسائل الواردة")
@@ -1150,7 +1228,6 @@ else:
                     target_phone = st.text_input("رقم الهاتف", value="01212231815")
                 header_greeting = f"مرحباً أستاذ/ة (عناية {target_name})"
             else:
-                active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
                 emp_map = {f"ID: #{u['user_id']} - {u['full_name']}": u for u in active_users_list}
                 
                 with col_wa1:
@@ -1158,7 +1235,7 @@ else:
                     target_u_obj = emp_map[selected_emp_wa]
                     target_name = target_u_obj['full_name']
                     target_phone = target_u_obj['phone_number']
-                    st.info(f"📱 رقم الهاتف المسجل بالنظام لـ ({target_name}): **{target_phone}**")
+                    st.info(f"📱 رقم الهاتف المسجل للنظام لـ ({target_name}): **{target_phone}**")
 
                 header_greeting = f"مرحباً أستاذ/ة {target_name}"
 
@@ -1195,7 +1272,7 @@ else:
                         })
 
     # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء والمكافآت
+    # التبويب 6: تقييم الأداء والكروت المزدوجة (تحديث وإخفاء الذكي للملاحظات)
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1215,7 +1292,7 @@ else:
         st.markdown("#### 🎛️ لوحة التحكم لتشكيل وفلترة تقارير الأداء")
         c_f1, c_f2 = st.columns(2)
 
-        active_users_eval = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
+        active_users_eval = get_active_users()
         emp_names_list = ["الكل"] + [u['full_name'] for u in active_users_eval]
 
         with c_f1:
@@ -1324,6 +1401,9 @@ else:
 
             st.write("---")
 
+            # شرط ذكي لإخفاء ملاحظات المدير من PDF وفي الكارت في حال عدم وجودها
+            admin_notes_html = f"<p><strong>ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>" if card_user_data['ملاحظات المدير'].strip() != "" else ""
+
             pdf_html_content = f"""
             <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #8c6d58; border-radius: 10px;">
                 <h1 style="color:#4e342e; text-align:center;">Mohamed Salem OPS App - Official ID Card</h1>
@@ -1331,7 +1411,7 @@ else:
                 <h2>📇 الموظف: {card_user_data['الموظف']} (ID: #{u_id})</h2>
                 <p><strong>المجموعة:</strong> {card_user_data['المجموعة']}</p>
                 <p><strong>صافي التقييم:</strong> {card_user_data['صافي التقييم']} نقطة ({card_user_data['التصنيف']} - {card_user_data['النسبة المئوية']})</p>
-                <p><strong>ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+                {admin_notes_html}
                 <p><strong>عدد الشركات المسندة:</strong> {card_user_data['عدد الشركات (ثابت)']} شركة</p>
             </div>
             """
@@ -1375,7 +1455,7 @@ else:
             <div style="background: linear-gradient(135deg, #ffffff 0%, #f1e8e1 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
                 <h3 style="margin:0; color: #4e342e; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">📊 ملخص تقييم أداء الموظف</h3>
                 <p style="margin-top:12px;"><strong>🏆 صافي التقييم الفعلي:</strong> <span style="font-size: 28px !important; color: #4e342e; font-weight: bold;">{card_user_data['صافي التقييم']} نقطة</span> (التصنيف: <span style="background-color:#8c6d58; color:white; padding: 2px 8px; border-radius: 6px;">"{card_user_data['التصنيف']}"</span> - بنسبة {card_user_data['النسبة المئوية']})</p>
-                <p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>
+                {f"<p><strong>📝 ملاحظات المدير:</strong> {card_user_data['ملاحظات المدير']}</p>" if card_user_data['ملاحظات المدير'].strip() != "" else ""}
             </div>
             """, unsafe_allow_html=True)
 
@@ -1387,7 +1467,7 @@ else:
                 st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
 
     # ---------------------------------------------------------
-    # التبويب 7: سجل الحالات والتدقيق (المطور بالكامل للبحث والفلترة وتصدير Excel)
+    # التبويب 7: سجل الحالات والتدقيق (ربط واستبعاد آلي للملغيّين)
     # ---------------------------------------------------------
     elif choice == "📋 سجل الحالات والتدقيق (Status Logs)":
         st.subheader("📋 سجل الحالات والتدقيق التاريخي (Status Logs & Audit Trail)")
@@ -1396,9 +1476,10 @@ else:
         logs_data = st.session_state['status_audit_logs']
         df_logs = pd.DataFrame(logs_data)
 
-        # --- لوحة الفلترة والبحث المتقدمة ---
         st.markdown("#### 🔍 محددات الفلترة والبحث المتقدم في السجل:")
         c_l1, c_f2, c_l3, c_l4 = st.columns(4)
+
+        active_users_names = [u['full_name'] for u in get_active_users()]
 
         with c_l1:
             all_st_list = ["كل الحالات"] + [
@@ -1413,13 +1494,13 @@ else:
             filter_comp = st.selectbox("🏢 التصفية بالشركة / العميل:", all_comp_logs)
 
         with c_l3:
-            all_updaters = ["كل الموظفين"] + sorted(list(df_logs["الموظف المحدث"].dropna().unique()))
+            # ربط القائمة المتاحة للبحث في السجل بالموظفين المفعلين حالياً فقط
+            all_updaters = ["كل الموظفين (المفعلين)"] + sorted(active_users_names)
             filter_user = st.selectbox("👤 التصفية بالموظف المحدث:", all_updaters)
 
         with c_l4:
             search_file_query = st.text_input("🔎 بحث برقم الملف / الفاتورة:", value="")
 
-        # تطبيق الفلاتر
         filtered_logs = df_logs.copy()
 
         if filter_status != "كل الحالات":
@@ -1428,7 +1509,7 @@ else:
         if filter_comp != "كل الشركات":
             filtered_logs = filtered_logs[filtered_logs["الشركة"] == filter_comp]
 
-        if filter_user != "كل الموظفين":
+        if filter_user != "كل الموظفين (المفعلين)":
             filtered_logs = filtered_logs[filtered_logs["الموظف المحدث"] == filter_user]
 
         if search_file_query.strip() != "":
@@ -1441,11 +1522,8 @@ else:
         st.write("---")
 
         st.markdown(f"#### 📋 نتائج استعلام السجل (إجمالي النتائج: {len(filtered_logs)} سجل):")
-        
-        # عرض الجدول بدون تسلسل وقاعدة البيانات وبوضع ID أول عمود
         st.dataframe(filtered_logs, use_container_width=True, hide_index=True)
 
-        # زر التصدير إلى Excel/CSV
         col_exp_log1, col_exp_log2 = st.columns([2, 2])
         with col_exp_log1:
             logs_csv_data = filtered_logs.to_csv(index=False).encode('utf-8-sig')
