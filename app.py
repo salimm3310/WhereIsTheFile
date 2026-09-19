@@ -506,20 +506,50 @@ else:
                         st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
                         st.rerun()
 
-        # --- التبويب الجديد الخاص بإدارة وتعديل وحذف الشحنات للمدير فقط ---
+        # --- التبويب المطور لإدارة وتعديل والحذف الجماعي للشحنات ---
         with tab_ship_admin:
-            st.markdown("### 📦 لوحة تعديل وحذف الشحنات (صلاحية خاصة بالمدير)")
+            st.markdown("### 📦 لوحة الحذف الجماعي والتعديل للشحنات (Admin Only)")
             shipments_list = st.session_state['active_shipments']
             
             if shipments_list:
-                ship_select_options = {f"ملف: {s['file_num']} - شركة: {s['company']} (الفاتورة: {s['inv']})": s for s in shipments_list}
-                selected_ship_admin_label = st.selectbox("اختر الشحنة المراد تعديلها أو حذفها:", list(ship_select_options.keys()))
-                target_ship = ship_select_options[selected_ship_admin_label]
+                st.info("💡 يمكنك هنا تحديد شحنات متعددة أو اختيار الكل لحذفهم دفعة واحدة بدلاً من الحذف الفردي.")
+                
+                # --- 1. خيار تحديد الكل أو اختيار متعدد ---
+                col_sel1, col_sel2 = st.columns([1, 3])
+                with col_sel1:
+                    select_all = st.checkbox("✅ تحديد/اختيار جميع الشحنات", value=False)
+                
+                # إعداد خيارات القائمة
+                ship_options_map = {f"ملف: {s['file_num']} | شركة: {s['company']} | فاتورة: {s['inv']}": s for s in shipments_list}
+                all_labels = list(ship_options_map.keys())
+                
+                default_selected = all_labels if select_all else []
+                
+                selected_ship_labels = st.multiselect(
+                    "📋 اختر الشحنات المراد التعامل معها بالحذف الجماعي:",
+                    options=all_labels,
+                    default=default_selected
+                )
+                
+                # زر الحذف الجماعي
+                if selected_ship_labels:
+                    st.warning(f"⚠️ تم تحديد عدد ({len(selected_ship_labels)}) شحنة للحذف.")
+                    if st.button(f"🗑️ حذف الشحنات المحددة ({len(selected_ship_labels)}) دفعة واحدة", type="primary"):
+                        selected_objects = [ship_options_map[label] for label in selected_ship_labels]
+                        for s_obj in selected_objects:
+                            if s_obj in st.session_state['active_shipments']:
+                                st.session_state['active_shipments'].remove(s_obj)
+                        
+                        st.success(f"🎉 تم حذف ({len(selected_ship_labels)}) شحنة بنجاح من النظام!")
+                        st.rerun()
 
-                with st.form("admin_edit_shipment_form"):
-                    st.markdown(f"#### ✏️ تعديل كافة بيانات الشحنة رقم: **{target_ship['file_num']}**")
+                st.write("---")
+                st.markdown("#### ✏️ تعديل شحنة فردية بالتفصيل:")
+                selected_single_label = st.selectbox("اختر الشحنة للتعديل التفصيلي:", all_labels)
+                target_ship = ship_options_map[selected_single_label]
+
+                with st.form("admin_edit_single_shipment_form"):
                     col_sh1, col_sh2 = st.columns(2)
-                    
                     with col_sh1:
                         adm_file_num = st.text_input("رقم الملف (File Number):", value=target_ship['file_num'])
                         adm_company = st.text_input("اسم الشركة / العميل:", value=target_ship['company'])
@@ -534,13 +564,9 @@ else:
                         ], index=['Under Operation', 'Waiting BL', 'Draft', 'Waiting Confirmation', 'Stamped', 'Ready to be invoiced', 'Closed'].index(target_ship['status']) if target_ship['status'] in ['Under Operation', 'Waiting BL', 'Draft', 'Waiting Confirmation', 'Stamped', 'Ready to be invoiced', 'Closed'] else 0)
                         adm_note = st.text_area("الملاحظة الجانبية:", value=target_ship.get('note', ''), height=80)
 
-                    col_sh_b1, col_sh_b2 = st.columns(2)
-                    with col_sh_b1:
-                        save_ship_btn = st.form_submit_button("💾 حفظ تعديلات الشحنة")
-                    with col_sh_b2:
-                        del_ship_btn = st.form_submit_button("🗑️ حذف الشحنة نهائياً من النظام")
+                    save_single_ship_btn = st.form_submit_button("💾 حفظ تعديلات الشحنة المحددة")
 
-                    if save_ship_btn:
+                    if save_single_ship_btn:
                         target_ship['file_num'] = adm_file_num.strip()
                         target_ship['company'] = adm_company.strip()
                         target_ship['bkg'] = adm_bkg.strip()
@@ -552,14 +578,9 @@ else:
                         
                         st.success(f"✅ تم حفظ وتحديث بيانات الشحنة رقم ({adm_file_num}) بنجاح!")
                         st.rerun()
-
-                    if del_ship_btn:
-                        st.session_state['active_shipments'].remove(target_ship)
-                        st.success(f"🗑️ تم حذف الشحنة رقم ({target_ship['file_num']}) نهائياً من النظام!")
-                        st.rerun()
             else:
                 st.info("لا توجد شحنات مسجلة بالنظام حالياً لتعديلها أو حذفها.")
-
+                
         with tab_audit:
             st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
