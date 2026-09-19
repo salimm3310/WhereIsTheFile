@@ -177,7 +177,6 @@ if 'registered_users' not in st.session_state:
         {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "allowed_pages": ALL_MODULES[1:4], "status": "Active"}
     ]
 
-# تهيئة صيغة التوقيع الرسمي في النظام (المدير فقط يمتلك صلاحية تعديلها)
 if 'official_signature' not in st.session_state:
     st.session_state['official_signature'] = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
 
@@ -212,6 +211,16 @@ if 'whatsapp_logs' not in st.session_state:
     st.session_state['whatsapp_logs'] = [
         {"sender": "Mohamed Salem", "target_name": "أستاذ أحمد - U.S.C", "phone": "201212231815", "text": "تحديث جديد لشحنتكم ملف رقم (260862115)", "time": "2026-09-18 10:30:00"},
         {"sender": "أحمد علي", "target_name": "شركة CFA Global", "phone": "201012345678", "text": "تنبيه: تم رفع بوليصة الشحن بانتظار الاعتماد", "time": "2026-09-18 11:45:00"}
+    ]
+
+# أرشيف وقاعدة سجل الحالات التاريخية
+if 'status_audit_logs' not in st.session_state:
+    st.session_state['status_audit_logs'] = [
+        {"ID": 101, "رقم الملف": "260862115", "الشركة": "U.S.C", "الفاتورة": "3A - 3B", "الحالة السابقة": "Draft", "الحالة الجديدة": "Under Operation", "الموظف المحدث": "Mohamed Salem", "التاريخ والوقت": "2026-09-18 10:00:00", "ملاحظات": "تحديث تشغيلي عادي"},
+        {"ID": 102, "رقم الملف": "260862116", "الشركة": "CFA Global", "الفاتورة": "104B", "الحالة السابقة": "Under Operation", "الحالة الجديدة": "Waiting BL", "الموظف المحدث": "أحمد علي", "التاريخ والوقت": "2026-09-18 11:30:00", "ملاحظات": "في انتظار الاعتماد"},
+        {"ID": 103, "رقم الملف": "260862117", "الشركة": "Al-Salem Trading", "الفاتورة": "88C", "الحالة السابقة": "Stamped", "الحالة الجديدة": "Ready to be invoiced", "الموظف المحدث": "Mohamed Salem", "التاريخ والوقت": "2026-09-18 12:15:00", "ملاحظات": "جاهز للتحصيل"},
+        {"ID": 104, "رقم الملف": "260862118", "الشركة": "U.S.C", "الفاتورة": "99A", "الحالة السابقة": "Under Operation", "الحالة الجديدة": "Draft", "الموظف المحدث": "محمود حسن", "التاريخ والوقت": "2026-09-12 09:00:00", "ملاحظات": "تعليق بناء على طلب العميل"},
+        {"ID": 105, "رقم الملف": "260862119", "الشركة": "U.S.C", "الفاتورة": "12C", "الحالة السابقة": "Ready to be invoiced", "الحالة الجديدة": "Closed", "الموظف المحدث": "Mohamed Salem", "التاريخ والوقت": "2026-09-15 14:00:00", "ملاحظات": "تم اغلاق الملف وقبض المستحقات"}
     ]
 
 if 'selected_shipment_id' not in st.session_state:
@@ -419,7 +428,7 @@ else:
     choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
     # ---------------------------------------------------------
-    # التبويب 1: لوحة التحكم الإدارية (Admin Panel) - تتضمن إعداد صيغة التوقيع للمدير
+    # التبويب 1: لوحة التحكم الإدارية (Admin Panel)
     # ---------------------------------------------------------
     if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
         st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
@@ -473,12 +482,24 @@ else:
             st.markdown("### 🛠️ إدارة الحسابات المفعلة (تعديل / حذف / إعادة ضبط المرور)")
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
             
-            user_options = {f"{u['full_name']} ({u['phone_number']}) - مجموعة: {u['role_group']}": u for u in active_users}
+            # تجهيز بيانات الجدول بوضع ID كأول عمود وبدون كشف التسلسل الافتراضي
+            df_users_display = pd.DataFrame([{
+                "ID": u['user_id'],
+                "الاسم بالكامل": u['full_name'],
+                "رقم الهاتف": u['phone_number'],
+                "المجموعة": u['role_group'],
+                "الحالة": u['status']
+            } for u in active_users])
+            
+            st.dataframe(df_users_display, use_container_width=True, hide_index=True)
+            st.write("---")
+
+            user_options = {f"ID: #{u['user_id']} - {u['full_name']} ({u['phone_number']})": u for u in active_users}
             selected_u_label = st.selectbox("اختر الحساب المراد إدارته وتعديله:", list(user_options.keys()))
             target_u = user_options[selected_u_label]
 
             with st.form("edit_user_form"):
-                st.markdown(f"#### ✏️ تعديل بيانات الحساب: **{target_u['full_name']}**")
+                st.markdown(f"#### ✏️ تعديل بيانات الحساب: **{target_u['full_name']}** (ID: #{target_u['user_id']})")
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
                     edit_name = st.text_input("اسم المستخدم / الموظف:", value=target_u['full_name'])
@@ -530,7 +551,7 @@ else:
                 with col_sel1:
                     select_all = st.checkbox("✅ تحديد/اختيار جميع الشحنات", value=False)
                 
-                ship_options_map = {f"ملف: {s['file_num']} | شركة: {s['company']} | فاتورة: {s['inv']}": s for s in shipments_list}
+                ship_options_map = {f"ID: #{s['id']} | ملف: {s['file_num']} | شركة: {s['company']}": s for s in shipments_list}
                 all_labels = list(ship_options_map.keys())
                 default_selected = all_labels if select_all else []
                 
@@ -613,7 +634,7 @@ else:
         with tab_audit:
             st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
-            aud_user_options = {f"{u['full_name']} ({u['phone_number']})": u for u in active_users}
+            aud_user_options = {f"ID: #{u['user_id']} - {u['full_name']}": u for u in active_users}
             selected_aud_label = st.selectbox("اختر المستخدم لعرض سجله الخاص:", list(aud_user_options.keys()))
             aud_u = aud_user_options[selected_aud_label]
 
@@ -653,7 +674,7 @@ else:
             st.markdown("### 🏆 التحكم بنقاط تقييم الموظفين والتحليل العام للأداء")
             
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
-            eval_user_options = {f"{u['full_name']} ({u['role_group']})": u for u in active_users}
+            eval_user_options = {f"ID: #{u['user_id']} - {u['full_name']}": u for u in active_users}
             selected_eval_label = st.selectbox("اختر الموظف لإدارة نقاطه وتحليل أنائه:", list(eval_user_options.keys()))
             eval_u = eval_user_options[selected_eval_label]
 
@@ -697,16 +718,16 @@ else:
             st.info("💡 يمكنك هنا تعديل أوقات الفحص والتحذير والتأخير لكل حالة من الحالات الـ 8 بشكل مباشر.")
 
             sla_data = [
-                {"الحالة": "Under Operation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 4, "ساعات التأخير": 0},
-                {"الحالة": "Waiting BL", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 12, "أيام التأخير (Late Days)": 3, "ساعات التأخير": 0},
-                {"الحالة": "Draft", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Waiting Confirmation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 5, "ساعات التأخير": 0},
-                {"الحالة": "Stamped", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Ready to be invoiced", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
-                {"الحالة": "Closed", "أيام الفحص (Check Days)": 0, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 0, "ساعات التأخير": 0}
+                {"ID": 1, "الحالة": "Under Operation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 4, "ساعات التأخير": 0},
+                {"ID": 2, "الحالة": "Waiting BL", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 12, "أيام التأخير (Late Days)": 3, "ساعات التأخير": 0},
+                {"ID": 3, "الحالة": "Draft", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"ID": 4, "الحالة": "Waiting Confirmation", "أيام الفحص (Check Days)": 2, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 5, "ساعات التأخير": 0},
+                {"ID": 5, "الحالة": "Stamped", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"ID": 6, "الحالة": "Ready to be invoiced", "أيام الفحص (Check Days)": 1, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 2, "ساعات التأخير": 0},
+                {"ID": 7, "الحالة": "Closed", "أيام الفحص (Check Days)": 0, "ساعات الفحص": 0, "أيام التأخير (Late Days)": 0, "ساعات التأخير": 0}
             ]
             
-            df_sla_edit = st.data_editor(pd.DataFrame(sla_data), use_container_width=True)
+            df_sla_edit = st.data_editor(pd.DataFrame(sla_data), use_container_width=True, hide_index=True)
             if st.button("💾 حفظ تعديلات مهل SLA السحابية"):
                 st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
 
@@ -718,7 +739,7 @@ else:
 
         df_shipments = pd.DataFrame(st.session_state['active_shipments'])
         df_shipments.rename(columns={
-            "id": "shipment_id", "file_num": "file_number", "company": "company_name",
+            "id": "ID", "file_num": "file_number", "company": "company_name",
             "inv": "invoice_number", "status": "current_status", "holded": "is_holded",
             "last_up": "last_updated_at", "last_status_updater": "full_name"
         }, inplace=True)
@@ -793,19 +814,19 @@ else:
             st.markdown("### 🏢 تقييم أداء العملاء وتفاصيل التأخيرات للمتابعة الفورية")
             
             comp_eval = filtered_df.groupby("company_name").agg(
-                إجمالي_الشحنات=('shipment_id', 'count'),
+                إجمالي_الشحنات=('ID', 'count'),
                 المكتملة_Closed=('current_status', lambda x: (x == 'Closed').sum()),
                 المتأخرة_Late=('sla_status', lambda x: (x == 'متأخر (Late)').sum()),
                 المعلقة_Hold=('is_holded', 'sum')
             ).reset_index()
 
-            st.dataframe(comp_eval, use_container_width=True)
+            st.dataframe(comp_eval, use_container_width=True, hide_index=True)
 
             late_shipments = filtered_df[filtered_df['sla_status'] == 'متأخر (Late)']
             st.markdown("#### 🚨 كشف وصف الشحنات المتأخرة لمباشرة إجراءات المتابعة:")
             if not late_shipments.empty:
                 st.dataframe(late_shipments[[
-                    "file_number", "company_name", "current_status", 
+                    "ID", "file_number", "company_name", "current_status", 
                     "full_name", "last_updated_at", "h_reason"
                 ]].rename(columns={
                     "file_number": "رقم الملف",
@@ -814,7 +835,7 @@ else:
                     "full_name": "الموظف المحدث للحالة",
                     "last_updated_at": "تاريخ آخر تحديث حالة",
                     "h_reason": "سبب التعليق إن وجد"
-                }), use_container_width=True)
+                }), use_container_width=True, hide_index=True)
             else:
                 st.success("✅ لا توجد شحنات متأخرة حالياً لكافة العملاء المحددين.")
 
@@ -836,7 +857,7 @@ else:
 
         elif selected_analysis == "📂 كشف واستعلام ملفات العملاء التفصيلي":
             st.markdown("### 📂 كشف الملفات المجمعة للعملاء المحددين")
-            st.dataframe(filtered_df, use_container_width=True)
+            st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
     # ---------------------------------------------------------
     # التبويب 3: إدارة الحالات والتتبع
@@ -851,6 +872,7 @@ else:
             sla_label, sla_class, elapsed_h = calculate_sla_status(r['status'], r['last_up'])
             
             shipment_list.append({
+                'ID': r['id'],
                 'رقم الملف': r['file_num'],
                 'الشركة': r['company'],
                 'رقم الحجز': r['bkg'],
@@ -865,12 +887,12 @@ else:
 
         df = pd.DataFrame(shipment_list)
         st.markdown("#### 📋 جدول الشحنات النشطة ومؤشرات الالتزام")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
         st.write("---")
         st.markdown("### 🛠️ تحديث الحالة وإضافة الملاحظة")
 
-        shipment_map = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r['id'] for r in rows}
+        shipment_map = {f"ID: #{r['id']} | ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r['id'] for r in rows}
         shipment_labels = list(shipment_map.keys())
 
         default_idx = 0
@@ -911,12 +933,27 @@ else:
                         st.error("⚠️ يرجى كتابة سبب التعليق عند تفعيل خيار Hold.")
                     else:
                         was_not_closed = (s_data['status'] != 'Closed')
+                        prev_st_val = s_data['status']
                         
                         s_data['status'] = new_selected_status
                         s_data['holded'] = 1 if set_hold else 0
                         s_data['h_reason'] = hold_reason_text.strip() if set_hold else ""
                         s_data['last_up'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         s_data['last_status_updater'] = user['full_name']
+
+                        # إضافة السجل تلقائياً لأرشيف سجل الحالات والتدقيق
+                        new_log_id = max([log['ID'] for log in st.session_state['status_audit_logs']]) + 1 if st.session_state['status_audit_logs'] else 101
+                        st.session_state['status_audit_logs'].append({
+                            "ID": new_log_id,
+                            "رقم الملف": s_data['file_num'],
+                            "الشركة": s_data['company'],
+                            "الفاتورة": s_data['inv'],
+                            "الحالة السابقة": prev_st_val,
+                            "الحالة الجديدة": new_selected_status,
+                            "الموظف المحدث": user['full_name'],
+                            "التاريخ والوقت": s_data['last_up'],
+                            "ملاحظات": f"تعديل بواسطة {user['full_name']}"
+                        })
 
                         if new_selected_status == 'Closed' and was_not_closed:
                             u_pts = st.session_state['user_points'].get(user['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
@@ -927,7 +964,7 @@ else:
                         update_shipment_sql = "UPDATE shipments SET current_status = ?, is_holded = ?, hold_reason = ? WHERE shipment_id = ?"
                         execute_query(update_shipment_sql, (new_selected_status, 1 if set_hold else 0, hold_reason_text.strip() if set_hold else None, s_data['id']))
 
-                        st.success(f"✅ تم حفظ تعديل حالة الملف ({s_data['file_num']}) بنجاح!")
+                        st.success(f"✅ تم حفظ تعديل حالة الملف ({s_data['file_num']}) بنجاح وتوثيقه بسجل الحالات!")
                         st.rerun()
 
             with col_notes:
@@ -1001,8 +1038,9 @@ else:
                 if file_num.strip() == "" or company.strip() == "":
                     st.error("❌ رقم الملف واسم الشركة حقول إجبارية.")
                 else:
+                    new_id = len(st.session_state['active_shipments']) + 1
                     new_item = {
-                        "id": len(st.session_state['active_shipments']) + 1,
+                        "id": new_id,
                         "file_num": file_num,
                         "company": company,
                         "bkg": bkg_num,
@@ -1015,17 +1053,30 @@ else:
                         "note": ""
                     }
                     st.session_state['active_shipments'].append(new_item)
-                    st.success(f"🎉 تم إضافة الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
+                    
+                    # تسجيل الإضافة بسجل الحالات
+                    new_log_id = max([log['ID'] for log in st.session_state['status_audit_logs']]) + 1 if st.session_state['status_audit_logs'] else 101
+                    st.session_state['status_audit_logs'].append({
+                        "ID": new_log_id,
+                        "رقم الملف": file_num,
+                        "الشركة": company,
+                        "الفاتورة": inv_num,
+                        "الحالة السابقة": "New Entry",
+                        "الحالة الجديدة": "Under Operation",
+                        "الموظف المحدث": user['full_name'],
+                        "التاريخ والوقت": new_item['last_up'],
+                        "ملاحظات": "إضافة شحنة جديدة للنظام"
+                    })
+                    st.success(f"🎉 تم إضافة الشحنة (ID: #{new_id} - ملف: {file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 5: المراسلات والواتساب (مدمج بالتوقيع الرسمي المعمم)
+    # التبويب 5: المراسلات والواتساب
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("المراسالات")
 
         tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "WhatsApp"])
 
-        # التوقيع الرسمي الحالي المخزن بالـ session_state
         CURRENT_OFFICIAL_SIGNATURE = st.session_state['official_signature']
 
         with tab_msg:
@@ -1033,7 +1084,7 @@ else:
             with col_send:
                 st.markdown("### 📤 إرسال رسالة داخلية")
                 active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
-                emp_map = {f"{u['full_name']} ({u['role_group']})": u for u in active_users_list}
+                emp_map = {f"ID: #{u['user_id']} - {u['full_name']} ({u['role_group']})": u for u in active_users_list}
                 target_emp_label = st.selectbox("إلى المستخدم / الفريق:", list(emp_map.keys()))
                 target_emp_obj = emp_map[target_emp_label]
 
@@ -1041,7 +1092,7 @@ else:
 
                 if msg_type == "تنبيه/تحديث لشحنة محددة":
                     rows = st.session_state['active_shipments']
-                    ship_map = {f"ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
+                    ship_map = {f"ID: #{r['id']} - ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
                     selected_s_label = st.selectbox("اختر الشحنة المراد التنبيه عليها:", list(ship_map.keys()))
                     selected_s = ship_map[selected_s_label]
 
@@ -1087,7 +1138,7 @@ else:
             recipient_type = st.radio("تحديد نوع المستلم:", ["مستخدم/موظف بالبرنامج", "العميل"], horizontal=True)
 
             rows = st.session_state['active_shipments']
-            shipment_options = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r for r in rows}
+            shipment_options = {f"ID: #{r['id']} - ملف: {r['file_num']} - شركة: {r['company']}": r for r in rows}
             selected_ship_label = st.selectbox("اختر الشحنة المُراد المراسلة بشأنها:", list(shipment_options.keys()))
             selected_ship = shipment_options[selected_ship_label]
 
@@ -1100,7 +1151,7 @@ else:
                 header_greeting = f"مرحباً أستاذ/ة (عناية {target_name})"
             else:
                 active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
-                emp_map = {f"{u['full_name']} ({u['phone_number']})": u for u in active_users_list}
+                emp_map = {f"ID: #{u['user_id']} - {u['full_name']}": u for u in active_users_list}
                 
                 with col_wa1:
                     selected_emp_wa = st.selectbox("اختر الموظف المستلم:", list(emp_map.keys()))
@@ -1202,7 +1253,7 @@ else:
                 rating_category = "مكافح"
 
             raw_eval_list.append({
-                "user_id": u['user_id'],
+                "ID": u['user_id'],
                 "الموظف": u['full_name'],
                 "المجموعة": u['role_group'],
                 "النقاط المكتسبة": pts['earned'],
@@ -1225,17 +1276,13 @@ else:
         elif filter_rank == "الأقل تقييماً (Lowest Performers)":
             df_eval = df_eval.sort_values(by="صافي التقييم", ascending=True)
 
-        df_eval.reset_index(drop=True, inplace=True)
-        df_eval.index = df_eval.index + 1
-        df_eval.index.name = "#"
-
         st.markdown("#### 📋 جدول التقييم العام للموظفين")
-        display_df = df_eval.drop(columns=["user_id", "قائمة الشركات"])
-        st.dataframe(display_df, use_container_width=True)
+        display_df = df_eval.drop(columns=["قائمة الشركات"])
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
 
         col_ex1, col_ex2 = st.columns([2, 2])
         with col_ex1:
-            csv_data = display_df.to_csv(index=True).encode('utf-8-sig')
+            csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button("📥 تصدير التقرير (Excel / CSV)", data=csv_data, file_name="Performance_Report.csv", mime="text/csv", use_container_width=True)
         
         with col_ex2:
@@ -1251,7 +1298,7 @@ else:
         card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
 
         if card_user_data:
-            u_id = card_user_data['user_id']
+            u_id = card_user_data['ID']
 
             with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
@@ -1334,18 +1381,78 @@ else:
 
             st.markdown(f"#### 🏢 الشركات والعملاء القائم عليها الموظف (العدد الإجمالي الثابت: {card_user_data['عدد الشركات (ثابت)']} شركة):")
             if card_user_data['قائمة الشركات']:
-                df_comp = pd.DataFrame([{"#": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
-                st.dataframe(df_comp, use_container_width=True)
+                df_comp = pd.DataFrame([{"ID": idx+1, "اسم الشركة / العميل": comp} for idx, comp in enumerate(card_user_data['قائمة الشركات'])])
+                st.dataframe(df_comp, use_container_width=True, hide_index=True)
             else:
                 st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
 
     # ---------------------------------------------------------
-    # التبويب 7: سجل الحالات والتدقيق
+    # التبويب 7: سجل الحالات والتدقيق (المطور بالكامل للبحث والفلترة وتصدير Excel)
     # ---------------------------------------------------------
     elif choice == "📋 سجل الحالات والتدقيق (Status Logs)":
         st.subheader("📋 سجل الحالات والتدقيق التاريخي (Status Logs & Audit Trail)")
-        st.dataframe(pd.DataFrame([
-            {"#": 1, "الشحنة": "260862115", "الحالة السابقة": "Draft", "الحالة الجديدة": "Under Operation", "التاريخ والوقت": "2026-09-18 10:00:00"},
-            {"#": 2, "الشحنة": "260862116", "الحالة السابقة": "Under Operation", "الحالة الجديدة": "Waiting BL", "التاريخ والوقت": "2026-09-18 11:30:00"},
-            {"#": 3, "الشحنة": "260862117", "الحالة السابقة": "Stamped", "الحالة الجديدة": "Ready to be invoiced", "التاريخ والوقت": "2026-09-18 12:15:00"}
-        ]), use_container_width=True)
+        st.info("💡 مركز الاستعلام والأرشيف التاريخي الشامل لكافة تحركات وتحديثات الشحنات بالنظام.")
+
+        logs_data = st.session_state['status_audit_logs']
+        df_logs = pd.DataFrame(logs_data)
+
+        # --- لوحة الفلترة والبحث المتقدمة ---
+        st.markdown("#### 🔍 محددات الفلترة والبحث المتقدم في السجل:")
+        c_l1, c_f2, c_l3, c_l4 = st.columns(4)
+
+        with c_l1:
+            all_st_list = ["كل الحالات"] + [
+                'Under Operation', 'Waiting BL', 'Draft', 
+                'Waiting Confirmation', 'Stamped', 
+                'Ready to be invoiced', 'Closed', 'New Entry'
+            ]
+            filter_status = st.selectbox("📌 التصفية بالحالة التشغيلية:", all_st_list)
+
+        with c_f2:
+            all_comp_logs = ["كل الشركات"] + sorted(list(df_logs["الشركة"].dropna().unique()))
+            filter_comp = st.selectbox("🏢 التصفية بالشركة / العميل:", all_comp_logs)
+
+        with c_l3:
+            all_updaters = ["كل الموظفين"] + sorted(list(df_logs["الموظف المحدث"].dropna().unique()))
+            filter_user = st.selectbox("👤 التصفية بالموظف المحدث:", all_updaters)
+
+        with c_l4:
+            search_file_query = st.text_input("🔎 بحث برقم الملف / الفاتورة:", value="")
+
+        # تطبيق الفلاتر
+        filtered_logs = df_logs.copy()
+
+        if filter_status != "كل الحالات":
+            filtered_logs = filtered_logs[filtered_logs["الحالة الجديدة"] == filter_status]
+
+        if filter_comp != "كل الشركات":
+            filtered_logs = filtered_logs[filtered_logs["الشركة"] == filter_comp]
+
+        if filter_user != "كل الموظفين":
+            filtered_logs = filtered_logs[filtered_logs["الموظف المحدث"] == filter_user]
+
+        if search_file_query.strip() != "":
+            q = search_file_query.strip().lower()
+            filtered_logs = filtered_logs[
+                filtered_logs["رقم الملف"].astype(str).str.lower().str.contains(q) |
+                filtered_logs["الفاتورة"].astype(str).str.lower().str.contains(q)
+            ]
+
+        st.write("---")
+
+        st.markdown(f"#### 📋 نتائج استعلام السجل (إجمالي النتائج: {len(filtered_logs)} سجل):")
+        
+        # عرض الجدول بدون تسلسل وقاعدة البيانات وبوضع ID أول عمود
+        st.dataframe(filtered_logs, use_container_width=True, hide_index=True)
+
+        # زر التصدير إلى Excel/CSV
+        col_exp_log1, col_exp_log2 = st.columns([2, 2])
+        with col_exp_log1:
+            logs_csv_data = filtered_logs.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 تصدير نتائج استعلام السجل إلى ملف (Excel / CSV)",
+                data=logs_csv_data,
+                file_name=f"Status_Logs_Report_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
