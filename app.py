@@ -39,7 +39,6 @@ st.markdown(f"""
         font-weight: 800 !important;
     }}
     
-    /* تصغير الخط في القائمة الجانبية لضمان إظهار كافة المسميات كاملة */
     section[data-testid="stSidebar"] div, section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] select, section[data-testid="stSidebar"] option {{
         font-size: 16px !important;
         font-weight: 700 !important;
@@ -178,6 +177,10 @@ if 'registered_users' not in st.session_state:
         {"user_id": 3, "full_name": "محمود حسن", "phone_number": "01112345678", "password_hash": make_hashes("123456"), "role_group": "Sys 1", "allowed_pages": ALL_MODULES[1:4], "status": "Active"}
     ]
 
+# تهيئة صيغة التوقيع الرسمي في النظام (المدير فقط يمتلك صلاحية تعديلها)
+if 'official_signature' not in st.session_state:
+    st.session_state['official_signature'] = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
+
 if 'user_points' not in st.session_state:
     st.session_state['user_points'] = {
         1: {"earned": 2, "deducted": 0, "notes": "إغلاق ملفات مكتملة"},
@@ -224,7 +227,6 @@ def parse_reference_string(raw_text):
         po_num = parts[0]
         file_num = parts[1]
         
-        # تفكيك الحاويات
         c_count = 1
         cont_raw = parts[2]
         count_match = re.search(r'(\d+(\.\d+)?)', cont_raw)
@@ -239,7 +241,6 @@ def parse_reference_string(raw_text):
         pod_val = parts[4]
         dest_country = parts[5]
         
-        # البحث عن خانة الفاتورة INV
         inv_index = -1
         for idx, part in enumerate(parts):
             if part.upper().startswith('INV'):
@@ -247,14 +248,11 @@ def parse_reference_string(raw_text):
                 break
         
         if inv_index != -1:
-            # استخراج رقم الفاتورة الصافي
             inv_raw = parts[inv_index]
             inv_clean = re.sub(r'(?i)inv\b', '', inv_raw).replace('-', ' ').strip()
             inv_clean = " ".join(inv_clean.split())
             
-            # الأجزاء المتبقية بعد الفاتورة (اسم الشركة + رقم الحجز + الوصف)
             remaining_parts = parts[inv_index + 1:]
-            
             company_val = ""
             bkg_val = ""
             item_desc_val = ""
@@ -263,7 +261,6 @@ def parse_reference_string(raw_text):
                 company_val = remaining_parts[0]
             elif len(remaining_parts) >= 2:
                 last_part = remaining_parts[-1]
-                # إذا كان الجزء الأخير عبارة عن أرقام أو رقم حجز (مثل 277175988 أو EBKG...)
                 if re.match(r'^[A-Za-z0-9]{7,}$', last_part):
                     bkg_val = last_part
                     company_val = " - ".join(remaining_parts[:-1])
@@ -422,16 +419,17 @@ else:
     choice = st.sidebar.selectbox("القائمة الرئيسية المسموحة", allowed_menu, index=0)
 
     # ---------------------------------------------------------
-    # التبويب 1: لوحة التحكم الإدارية (Admin Panel) - المحدثة بميزة تعديل وحذف الشحنات
+    # التبويب 1: لوحة التحكم الإدارية (Admin Panel) - تتضمن إعداد صيغة التوقيع للمدير
     # ---------------------------------------------------------
     if choice == "⚙️ لوحة التحكم الإدارية (Admin Panel)":
         st.subheader("⚙️ لوحة تحكم المدير والإدارة الشاملة (Mohamed Salem Control Panel)")
 
-        tab_users_act, tab_user_edit, tab_ship_admin, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
+        tab_users_act, tab_user_edit, tab_ship_admin, tab_sig_cfg, tab_audit, tab_points_eval, tab_sla_cfg = st.tabs([
             "👥 طلبات الحسابات بانتظار الاعتماد",
             "🛠️ إعدادات الحسابات المفعلة والصلاحيات",
-            "📦 إدارة وتعديل وحذف الشحنات (Admin Only)",
-            "📨 صندوق البريد وتتبع الواتساب الخارجي",
+            "📦 إدارة وتعديل وحذف الشحنات",
+            "✍️ إعداد وتعديل التوقيع الرسمي",
+            "📨 صندوق البريد وتتبع الواتساب",
             "🏆 تقييم الموظفين والتحكم بالنقاط",
             "⏱️ إعدادات المهل SLA"
         ])
@@ -520,7 +518,7 @@ else:
                         st.success(f"🗑️ تم حذف وتجميد حساب {target_u['full_name']} بنجاح!")
                         st.rerun()
 
-        # --- التبويب المطور لإدارة وتعديل والحذف الجماعي للشحنات ---
+        # --- تبويب الحذف الجماعي والتعديل للشحنات ---
         with tab_ship_admin:
             st.markdown("### 📦 لوحة الحذف الجماعي والتعديل للشحنات (Admin Only)")
             shipments_list = st.session_state['active_shipments']
@@ -528,15 +526,12 @@ else:
             if shipments_list:
                 st.info("💡 يمكنك هنا تحديد شحنات متعددة أو اختيار الكل لحذفهم دفعة واحدة بدلاً من الحذف الفردي.")
                 
-                # --- 1. خيار تحديد الكل أو اختيار متعدد ---
                 col_sel1, col_sel2 = st.columns([1, 3])
                 with col_sel1:
                     select_all = st.checkbox("✅ تحديد/اختيار جميع الشحنات", value=False)
                 
-                # إعداد خيارات القائمة
                 ship_options_map = {f"ملف: {s['file_num']} | شركة: {s['company']} | فاتورة: {s['inv']}": s for s in shipments_list}
                 all_labels = list(ship_options_map.keys())
-                
                 default_selected = all_labels if select_all else []
                 
                 selected_ship_labels = st.multiselect(
@@ -545,7 +540,6 @@ else:
                     default=default_selected
                 )
                 
-                # زر الحذف الجماعي
                 if selected_ship_labels:
                     st.warning(f"⚠️ تم تحديد عدد ({len(selected_ship_labels)}) شحنة للحذف.")
                     if st.button(f"🗑️ حذف الشحنات المحددة ({len(selected_ship_labels)}) دفعة واحدة", type="primary"):
@@ -594,6 +588,27 @@ else:
                         st.rerun()
             else:
                 st.info("لا توجد شحنات مسجلة بالنظام حالياً لتعديلها أو حذفها.")
+
+        # --- تبويب التحكم وتعديل صيغة التوقيع الرسمي (خاص بالمدير فقط) ---
+        with tab_sig_cfg:
+            st.markdown("### ✍️ التحكم وتعديل صيغة التوقيع الرسمي (صلاحية خاصة بالمدير)")
+            st.info("💡 النص المكتوب هنا يمثل التوقيع الرسمي المعتمد الذي سيتم إلحاقه آلياً وبشكل إجباري بكافة رسائل النظام والواتساب الخارجي.")
+            
+            with st.form("admin_signature_config_form"):
+                new_sig_input = st.text_area(
+                    "صيغة التوقيع الرسمي المعتمدة بالنظام:",
+                    value=st.session_state['official_signature'],
+                    height=120
+                )
+                save_sig_btn = st.form_submit_button("💾 حفظ وتحديث صيغة التوقيع المعتمدة")
+                
+                if save_sig_btn:
+                    if new_sig_input.strip() != "":
+                        st.session_state['official_signature'] = new_sig_input.strip()
+                        st.success("✅ تم تحديث صيغة التوقيع الرسمي الإداري بنجاح، وتعميمه على كافة المراسلات!")
+                        st.rerun()
+                    else:
+                        st.error("⚠️ لا يمكن ترك صيغة التوقيع فارغة.")
 
         with tab_audit:
             st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
@@ -695,8 +710,8 @@ else:
             if st.button("💾 حفظ تعديلات مهل SLA السحابية"):
                 st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
 
-# ---------------------------------------------------------
-    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة (محدثة للمستخدمين النشطين فقط)
+    # ---------------------------------------------------------
+    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة
     # ---------------------------------------------------------
     elif choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
@@ -713,7 +728,6 @@ else:
         st.markdown("#### 🔍 لوحة تصفية وبحث محددات التحليل")
         col_f1, col_f2 = st.columns(2)
 
-        # فلترة الأسماء المعتمدة على المستخدمين المفعلين بالنظام حالياً فقط
         active_users_names = [u['full_name'] for u in st.session_state['registered_users'] if u['status'] == 'Active']
 
         with col_f1:
@@ -747,7 +761,6 @@ else:
         if selected_analysis == "📊 تقييم أداء الشحنات بالحالات والأسماء":
             st.markdown(f"### 📊 توزيع شحنات الحالات متبوعة بأسماء الموظفين المحدثين")
             
-            # تصفية العرض فقط لأسماء الموظفين الحاليين المفعلين
             filtered_df_active_emp = filtered_df[filtered_df["full_name"].isin(active_users_names)]
             
             if selected_emp == "كل الموظفين (الشامل)":
@@ -931,7 +944,7 @@ else:
                         st.warning("يرجى كتابة نص الملاحظة قبل الحفظ.")
 
     # ---------------------------------------------------------
-    # التبويب 4: اضف الشحنة (المحدث باسم الزر الجديد)
+    # التبويب 4: اضف الشحنة
     # ---------------------------------------------------------
     elif choice == "➕ إضافة شحنة جديدة (تفكيك الـ 11)":
         st.subheader("اضف الشحنة")
@@ -1005,15 +1018,15 @@ else:
                     st.success(f"🎉 تم إضافة الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 5: المراسلات والواتساب (محمية ومؤمنة التوقيع)
+    # التبويب 5: المراسلات والواتساب (مدمج بالتوقيع الرسمي المعمم)
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("المراسالات")
 
         tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "WhatsApp"])
 
-        # التوقيع الإداري الرسمي المعتمد بالنظام (مؤمن وغير قابل للتعديل من الموظفين)
-        OFFICIAL_FIXED_FOOTER = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
+        # التوقيع الرسمي الحالي المخزن بالـ session_state
+        CURRENT_OFFICIAL_SIGNATURE = st.session_state['official_signature']
 
         with tab_msg:
             col_send, col_inbox = st.columns([2, 3])
@@ -1044,11 +1057,11 @@ else:
                 else:
                     user_editable_text = st.text_area("نص الرسالة الداخلية:", height=120)
 
-                st.info(f"🔒 التوقيع الإداري الرسمي المثبت بالنظام (غير قابل للتعديل):\n\n{OFFICIAL_FIXED_FOOTER}")
+                st.info(f"🔒 التوقيع الإداري الرسمي المدمج إجبارياً:\n\n{CURRENT_OFFICIAL_SIGNATURE}")
 
                 if st.button("🚀 إرسال الرسالة الداخلية"):
                     if user_editable_text.strip() != "":
-                        full_final_msg = f"{user_editable_text.strip()}\n\n{OFFICIAL_FIXED_FOOTER}"
+                        full_final_msg = f"{user_editable_text.strip()}\n\n{CURRENT_OFFICIAL_SIGNATURE}"
                         st.session_state['internal_messages'].append({
                             "sender": user['full_name'],
                             "recipient": target_emp_label,
@@ -1094,30 +1107,26 @@ else:
                     target_u_obj = emp_map[selected_emp_wa]
                     target_name = target_u_obj['full_name']
                     target_phone = target_u_obj['phone_number']
-                    st.info(f"📱 رقم الهاتف المسجل للنظام لـ ({target_name}): **{target_phone}**")
+                    st.info(f"📱 رقم الهاتف المسجل بالنظام لـ ({target_name}): **{target_phone}**")
 
                 header_greeting = f"مرحباً أستاذ/ة {target_name}"
 
-            # نص المتن التشغيلي القابل للتعديل فقط بدون التوقيع
             wa_body_template = (
                 f"{header_greeting}\n\n"
                 f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
                 f"📂 رقم الملف: {selected_ship['file_num']}\n"
                 f"🔖 اسم الشركة: {selected_ship['company']}\n"
                 f"🧾 رقم الفاتورة: {selected_ship['inv']}\n"
-                f"📌 الحالة الحالية: {selected_ship['status']}\n\n"
-                f"يرجى اتخاذ اللازم إنهاء الإجراء"
+                f"📌 الحالة الحالية: {selected_ship['status']}"
             )
 
             with col_wa2:
                 user_wa_body = st.text_area("نص رسالة التحديث (قابل للتعديل):", value=wa_body_template, height=180)
-                st.info(f"🔒 التوقيع الرسمي الإداري المدمج تلقائياً بالإرسال:\n\n{OFFICIAL_FIXED_FOOTER}")
+                st.info(f"🔒 التوقيع الرسمي الإداري المدمج آلياً بالرسالة:\n\n{CURRENT_OFFICIAL_SIGNATURE}")
 
             if target_phone.strip() != "":
                 clean_phone = format_whatsapp_phone(target_phone)
-                
-                # إلحاق التوقيع الرسمي الإجباري أوتوماتيكياً بأسفل النص المرسل
-                full_wa_message_with_signature = f"{user_wa_body.strip()}\n\n{OFFICIAL_FIXED_FOOTER}"
+                full_wa_message_with_signature = f"{user_wa_body.strip()}\n\n{CURRENT_OFFICIAL_SIGNATURE}"
                 encoded_msg = urllib.parse.quote(full_wa_message_with_signature)
                 direct_wa_url = f"https://wa.me/{clean_phone}?text={encoded_msg}"
 
@@ -1133,8 +1142,9 @@ else:
                             "text": full_wa_message_with_signature,
                             "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         })
+
     # ---------------------------------------------------------
-    # التبويب 6: تقييم الأداء المطور بـ المعاينة، تصدير PDF، والصور الذكية AI
+    # التبويب 6: تقييم الأداء والمكافآت
     # ---------------------------------------------------------
     elif choice == "📊 تقارير تقييم الأداء والمكافآت (Performance & Bonus)":
         st.subheader("تقييم الاداء")
@@ -1151,7 +1161,6 @@ else:
 
         st.success("✅ قاعدة التقييم المعتمدة بالنظام: 1 نقطة لكل ملف مكتمل ومغلق (Closed).")
 
-        # --- لوحة التحكم لتشكيل وفلترة التقرير ---
         st.markdown("#### 🎛️ لوحة التحكم لتشكيل وفلترة تقارير الأداء")
         c_f1, c_f2 = st.columns(2)
 
@@ -1163,19 +1172,16 @@ else:
         with c_f2:
             filter_rank = st.selectbox("🏆 ترتيب الأداء والتقييم:", ["الكل (افتراضي)", "الأعلى تقييماً (Top Performers)", "الأقل تقييماً (Lowest Performers)"])
 
-        # استخراج وتجهيز البيانات
         raw_eval_list = []
         for u in active_users_eval:
             pts = st.session_state['user_points'].get(u['user_id'], {"earned": 0, "deducted": 0, "notes": ""})
             net = pts['earned'] - pts['deducted']
             
-            # جلب شحنات وشركات الموظف
             emp_shipments = [s for s in st.session_state['active_shipments'] if s.get('last_status_updater') == u['full_name']]
             closed_ops = len([s for s in emp_shipments if s.get('status') == 'Closed'])
             total_ops = len(emp_shipments)
             emp_companies = list(set([s['company'] for s in emp_shipments if 'company' in s and s['company']]))
             
-            # حساب النسبة المئوية الدقيقة
             if closed_ops > 0:
                 ratio = (pts['earned'] / closed_ops) * 100.0
                 if ratio > 100.0: ratio = 100.0
@@ -1240,19 +1246,13 @@ else:
 
         st.write("---")
 
-        # --- قسم الكارت التعريفي المزدوج الوجهين ---
         st.markdown("### 💳 كارت الموظف المزدوج (Canva Modern Business ID Card)")
         selected_card_emp = st.selectbox("اختر الموظف", [u['full_name'] for u in active_users_eval])
         card_user_data = next((item for item in raw_eval_list if item['الموظف'] == selected_card_emp), None)
 
         if card_user_data:
             u_id = card_user_data['user_id']
-            
-            # حالة المعاينة المباشرة قبل الحفظ
-            if f'show_preview_{u_id}' not in st.session_state:
-                st.session_state[f'show_preview_{u_id}'] = False
 
-            # لوحة تعديل النقاط والملاحظات والصورة بالـ AI والرفع المباشر
             with st.expander(f"✏️ تعديل النقاط وملاحظات المدير وصورة الموظف لـ ({selected_card_emp})"):
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
@@ -1261,39 +1261,22 @@ else:
                     edit_admin_notes = st.text_area("ملاحظات المدير الإدارية:", value=card_user_data['ملاحظات المدير'], height=80, key=f"e_not_{u_id}")
 
                 with col_e2:
-                    st.markdown("**🖼️ صورة الموظف (رفع مباشرة أو بالـ AI):**")
-                    uploaded_img = st.file_uploader("1. رفع صورة مباشرة:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
+                    st.markdown("**🖼️ صورة الموظف:**")
+                    uploaded_img = st.file_uploader("رفع صورة مباشرة للموظف:", type=["jpg", "png", "jpeg"], key=f"up_img_{u_id}")
                     if uploaded_img:
                         st.session_state['user_photos'][u_id] = uploaded_img.getvalue()
 
-                    st.markdown("---")
-                    st.markdown("**2. مولد الصور الشخصية بالذكاء الاصطناعي (AI Headshot Generator 4K):**")
-                    ai_prompt = st.text_input("وصف الصورة النصية المحدثة:", value=f"High quality formal professional headshot portrait of {selected_card_emp}, logistics business manager, neutral office background, 4k ultra realistic", key=f"ai_p_{u_id}")
-                    
-                    if st.button("✨ توليد وتوليد صورة عالية الجودة بالـ AI", key=f"btn_ai_{u_id}"):
-                        st.session_state['user_photos'][u_id] = "AI_GENERATED"
-                        st.success("✅ تم توليد وتحديث الصورة الاحترافية بالذكاء الاصطناعي!")
-
-                col_btn_p1, col_btn_p2 = st.columns(2)
-                with col_btn_p1:
-                    if st.button("👁️ معاينة الكارت المحدث قبل الحفظ", key=f"btn_prev_{u_id}"):
-                        st.session_state[f'show_preview_{u_id}'] = True
-                        st.info("🔍 تم تفعيل وضع المعاينة المباشرة للكارت أدناه!")
-
-                with col_btn_p2:
-                    if st.button("💾 حفظ واعتماد التعديلات نهائياً", key=f"btn_save_eval_{u_id}"):
-                        st.session_state['user_points'][u_id] = {
-                            "earned": edit_earned,
-                            "deducted": edit_deducted,
-                            "notes": edit_admin_notes.strip()
-                        }
-                        st.session_state[f'show_preview_{u_id}'] = False
-                        st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
-                        st.rerun()
+                if st.button("💾 حفظ واعتماد التعديلات نهائياً", key=f"btn_save_eval_{u_id}"):
+                    st.session_state['user_points'][u_id] = {
+                        "earned": edit_earned,
+                        "deducted": edit_deducted,
+                        "notes": edit_admin_notes.strip()
+                    }
+                    st.success("✅ تم حفظ واعتماد التعديلات بنجاح!")
+                    st.rerun()
 
             st.write("---")
 
-            # تصدير الكارت إلى ملف PDF صفحة واحدة
             pdf_html_content = f"""
             <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #8c6d58; border-radius: 10px;">
                 <h1 style="color:#4e342e; text-align:center;">Mohamed Salem OPS App - Official ID Card</h1>
@@ -1317,14 +1300,11 @@ else:
             st.write("---")
             st.markdown("#### 📄 الوجه الأول: البيانات الشخصية والصورة")
             
-            # 1. عرض الوجه الأول للكارت
             col_c1, col_c2 = st.columns([1, 2])
             with col_c1:
                 photo_data = st.session_state['user_photos'].get(u_id)
-                if photo_data and photo_data != "AI_GENERATED":
+                if photo_data:
                     st.image(photo_data, width=200, caption=card_user_data['الموظف'])
-                elif photo_data == "AI_GENERATED":
-                    st.markdown("<div style='width:200px; height:200px; background: linear-gradient(135deg, #4e342e, #8c6d58); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; font-size:20px; font-weight:bold; border:3px solid #8c6d58;'><span style='font-size:50px;'>🤖</span>AI Generated 4K</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='width:200px; height:200px; background-color:#8c6d58; color:white; display:flex; align-items:center; justify-content:center; border-radius:16px; font-size:70px;'>👤</div>", unsafe_allow_html=True)
 
@@ -1344,7 +1324,6 @@ else:
             st.write("---")
             st.markdown("#### 📊 الوجه الثاني: تقييم الأداء والشركات القائم عليها")
 
-            # 2. عرض الوجه الثاني للكارت
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #ffffff 0%, #f1e8e1 100%); border: 3px solid #8c6d58; border-radius: 16px; padding: 20px; color: #3e2723; box-shadow: 0 6px 12px rgba(0,0,0,0.15);">
                 <h3 style="margin:0; color: #4e342e; border-bottom: 2px solid #8c6d58; padding-bottom: 8px;">📊 ملخص تقييم أداء الموظف</h3>
@@ -1361,7 +1340,7 @@ else:
                 st.info("لا توجد شركات مسجلة على هذا الموظف حالياً.")
 
     # ---------------------------------------------------------
-    # التبويب 7: سجل الحالات
+    # التبويب 7: سجل الحالات والتدقيق
     # ---------------------------------------------------------
     elif choice == "📋 سجل الحالات والتدقيق (Status Logs)":
         st.subheader("📋 سجل الحالات والتدقيق التاريخي (Status Logs & Audit Trail)")
