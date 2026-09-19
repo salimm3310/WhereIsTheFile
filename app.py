@@ -606,7 +606,7 @@ else:
                 st.success("✅ تم حفظ اعتماد التوقيتات والمهل الزمنية الجديدة بنجاح!")
 
     # ---------------------------------------------------------
-    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة
+    # التبويب 2: لوحة المؤشرات والتحليلات المخصصة (محدثة للمستخدمين النشطين فقط)
     # ---------------------------------------------------------
     elif choice == "📊 لوحة المؤشرات والتحليلات المخصصة (Analytics Dashboard)":
         st.subheader("📈 لوحة التحليلات المتقدمة والشاملة (Comprehensive Analytics)")
@@ -623,9 +623,12 @@ else:
         st.markdown("#### 🔍 لوحة تصفية وبحث محددات التحليل")
         col_f1, col_f2 = st.columns(2)
 
+        # فلترة الأسماء المعتمدة على المستخدمين المفعلين بالنظام حالياً فقط
+        active_users_names = [u['full_name'] for u in st.session_state['registered_users'] if u['status'] == 'Active']
+
         with col_f1:
-            all_employees = ["كل الموظفين (الشامل)"] + sorted(list(df_shipments["full_name"].dropna().unique()))
-            selected_emp = st.selectbox("👤 اختر الموظف المحدد (صاحب آخر تحديث للحالة):", all_employees)
+            all_employees = ["كل الموظفين (الشامل)"] + sorted(active_users_names)
+            selected_emp = st.selectbox("👤 اختر الموظف المحدد (من المستخدمين المفعلين حالياً):", all_employees)
 
         with col_f2:
             all_companies = ["كل العملاء (الكل)"] + sorted(list(df_shipments["company_name"].dropna().unique()))
@@ -654,18 +657,24 @@ else:
         if selected_analysis == "📊 تقييم أداء الشحنات بالحالات والأسماء":
             st.markdown(f"### 📊 توزيع شحنات الحالات متبوعة بأسماء الموظفين المحدثين")
             
+            # تصفية العرض فقط لأسماء الموظفين الحاليين المفعلين
+            filtered_df_active_emp = filtered_df[filtered_df["full_name"].isin(active_users_names)]
+            
             if selected_emp == "كل الموظفين (الشامل)":
-                status_emp_summary = filtered_df.groupby(["current_status", "full_name"]).size().reset_index(name="عدد_الشحنات")
-                fig_stacked = px.bar(
-                    status_emp_summary, 
-                    x="current_status", 
-                    y="عدد_الشحنات", 
-                    color="full_name", 
-                    title="توزيع الحالات التشغيلية مقسمة بأسماء الموظفين القائمين بالتحديث", 
-                    text_auto=True,
-                    barmode="stack"
-                )
-                st.plotly_chart(fig_stacked, use_container_width=True)
+                status_emp_summary = filtered_df_active_emp.groupby(["current_status", "full_name"]).size().reset_index(name="عدد_الشحنات")
+                if not status_emp_summary.empty:
+                    fig_stacked = px.bar(
+                        status_emp_summary, 
+                        x="current_status", 
+                        y="عدد_الشحنات", 
+                        color="full_name", 
+                        title="توزيع الحالات التشغيلية مقسمة بأسماء الموظفين الحالية فقط", 
+                        text_auto=True,
+                        barmode="stack"
+                    )
+                    st.plotly_chart(fig_stacked, use_container_width=True)
+                else:
+                    st.info("لا توجد عمليات مسجلة للموظفين المفعلين حالياً.")
             else:
                 fig_single = px.bar(
                     filtered_df["current_status"].value_counts().reset_index(), 
@@ -724,7 +733,7 @@ else:
 
         elif selected_analysis == "📂 كشف واستعلام ملفات العملاء التفصيلي":
             st.markdown("### 📂 كشف الملفات المجمعة للعملاء المحددين")
-            st.dataframe(filtered_df, use_container_width=True)
+            st.dataframe(filtered_df, use_container_width=True)س
 
     # ---------------------------------------------------------
     # التبويب 3: إدارة الحالات والتتبع
