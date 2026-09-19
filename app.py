@@ -224,8 +224,8 @@ def parse_reference_string(raw_text):
         po_num = parts[0]
         file_num = parts[1]
         
+        # تفكيك الحاويات
         c_count = 1
-        c_type = ''
         cont_raw = parts[2]
         count_match = re.search(r'(\d+(\.\d+)?)', cont_raw)
         if count_match:
@@ -239,6 +239,7 @@ def parse_reference_string(raw_text):
         pod_val = parts[4]
         dest_country = parts[5]
         
+        # البحث عن خانة الفاتورة INV
         inv_index = -1
         for idx, part in enumerate(parts):
             if part.upper().startswith('INV'):
@@ -246,19 +247,32 @@ def parse_reference_string(raw_text):
                 break
         
         if inv_index != -1:
-            if inv_index + 1 < len(parts) and len(parts[inv_index+1]) <= 10:
-                inv_raw = f"{parts[inv_index]} - {parts[inv_index+1]}"
-                company_idx = inv_index + 2
-            else:
-                inv_raw = parts[inv_index]
-                company_idx = inv_index + 1
-
+            # استخراج رقم الفاتورة الصافي
+            inv_raw = parts[inv_index]
             inv_clean = re.sub(r'(?i)inv\b', '', inv_raw).replace('-', ' ').strip()
             inv_clean = " ".join(inv_clean.split())
+            
+            # الأجزاء المتبقية بعد الفاتورة (اسم الشركة + رقم الحجز + الوصف)
+            remaining_parts = parts[inv_index + 1:]
+            
+            company_val = ""
+            bkg_val = ""
+            item_desc_val = ""
 
-            company_val = parts[company_idx] if company_idx < len(parts) else ''
-            bkg_val = parts[company_idx + 1] if company_idx + 1 < len(parts) else ''
-            item_desc_val = " - ".join(parts[company_idx + 2:]) if company_idx + 2 < len(parts) else ''
+            if len(remaining_parts) == 1:
+                company_val = remaining_parts[0]
+            elif len(remaining_parts) >= 2:
+                last_part = remaining_parts[-1]
+                # إذا كان الجزء الأخير عبارة عن أرقام أو رقم حجز (مثل 277175988 أو EBKG...)
+                if re.match(r'^[A-Za-z0-9]{7,}$', last_part):
+                    bkg_val = last_part
+                    company_val = " - ".join(remaining_parts[:-1])
+                else:
+                    company_val = remaining_parts[0]
+                    bkg_val = remaining_parts[1]
+                    if len(remaining_parts) > 2:
+                        item_desc_val = " - ".join(remaining_parts[2:])
+
         else:
             inv_clean = parts[6]
             company_val = parts[7] if len(parts) > 7 else ''
@@ -580,7 +594,7 @@ else:
                         st.rerun()
             else:
                 st.info("لا توجد شحنات مسجلة بالنظام حالياً لتعديلها أو حذفها.")
-                
+
         with tab_audit:
             st.markdown("### 📨 تدقيق المراسلات والرسائل والواتساب المباشر لكل مستخدم")
             active_users = [u for u in st.session_state['registered_users'] if u['status'] == "Active"]
