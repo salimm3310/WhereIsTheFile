@@ -1005,25 +1005,25 @@ else:
                     st.success(f"🎉 تم إضافة الشحنة ({file_num}) بنجاح! الحالة: Under Operation")
 
     # ---------------------------------------------------------
-    # التبويب 5: المراسلات والواتساب المحدث
+    # التبويب 5: المراسلات والواتساب (محمية ومؤمنة التوقيع)
     # ---------------------------------------------------------
     elif choice == "💬 المراسلات والواتساب (Messaging & WhatsApp)":
         st.subheader("المراسالات")
 
         tab_msg, tab_wa = st.tabs(["📩 الرسائل الداخلية النظامية", "WhatsApp"])
 
+        # التوقيع الإداري الرسمي المعتمد بالنظام (مؤمن وغير قابل للتعديل من الموظفين)
+        OFFICIAL_FIXED_FOOTER = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
+
         with tab_msg:
             col_send, col_inbox = st.columns([2, 3])
             with col_send:
                 st.markdown("### 📤 إرسال رسالة داخلية")
-                
-                # قائمة الموظفين المفعلين
                 active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
                 emp_map = {f"{u['full_name']} ({u['role_group']})": u for u in active_users_list}
                 target_emp_label = st.selectbox("إلى المستخدم / الفريق:", list(emp_map.keys()))
                 target_emp_obj = emp_map[target_emp_label]
 
-                # الاختيار بين رسالة عادية أو تنبيه لشحنة
                 msg_type = st.radio("نوع الرسالة الداخلية:", ["رسالة عادية", "تنبيه/تحديث لشحنة محددة"], horizontal=True)
 
                 if msg_type == "تنبيه/تحديث لشحنة محددة":
@@ -1040,27 +1040,23 @@ else:
                         f"🧾 رقم الفاتورة: {selected_s['inv']}\n"
                         f"📌 الحالة الحالية: {selected_s['status']}"
                     )
-                    user_editable_text = st.text_area("نص التحديث التوضيحي (إن وجد):", value=dynamic_body, height=160)
+                    user_editable_text = st.text_area("نص التحديث التوضيحي:", value=dynamic_body, height=160)
                 else:
                     user_editable_text = st.text_area("نص الرسالة الداخلية:", height=120)
 
-                # الخاتمة الثابتة غير القابلة للتعديل
-                fixed_footer = "يرجى اتخاذ اللازم إنهاء الإجراء\nتحياتنا، فريق U.S.C للتشغيل\nM.Salem"
-                st.info(f"🔒 الخاتمة الملحقة بالرسالة تلقائياً:\n\n{fixed_footer}")
+                st.info(f"🔒 التوقيع الإداري الرسمي المثبت بالنظام (غير قابل للتعديل):\n\n{OFFICIAL_FIXED_FOOTER}")
 
                 if st.button("🚀 إرسال الرسالة الداخلية"):
                     if user_editable_text.strip() != "":
-                        full_final_msg = f"{user_editable_text.strip()}\n\n{fixed_footer}"
+                        full_final_msg = f"{user_editable_text.strip()}\n\n{OFFICIAL_FIXED_FOOTER}"
                         st.session_state['internal_messages'].append({
                             "sender": user['full_name'],
                             "recipient": target_emp_label,
                             "text": full_final_msg,
                             "time": datetime.now().strftime('%H:%M %p')
                         })
-                        st.success("✅ تم إرسال الرسالة الداخلية وتوثيقها بنجاح!")
+                        st.success("✅ تم إرسال الرسالة مع التوقيع الإداري المثبت بنجاح!")
                         st.rerun()
-                    else:
-                        st.warning("يرجى كتابة نص الرسالة أولاً.")
 
             with col_inbox:
                 st.markdown("### 📥 صندوق الرسائل الواردة")
@@ -1075,11 +1071,8 @@ else:
 
         with tab_wa:
             st.markdown("### WhatsApp")
-            
-            # 1. تحديد نوع المستلم
             recipient_type = st.radio("تحديد نوع المستلم:", ["مستخدم/موظف بالبرنامج", "العميل"], horizontal=True)
 
-            # 2. اختيار الشحنة المراد مراسلتها
             rows = st.session_state['active_shipments']
             shipment_options = {f"ملف: {r['file_num']} - شركة: {r['company']} (الحالة: {r['status']})": r for r in rows}
             selected_ship_label = st.selectbox("اختر الشحنة المُراد المراسلة بشأنها:", list(shipment_options.keys()))
@@ -1091,7 +1084,6 @@ else:
                 with col_wa1:
                     target_name = st.text_input("اسم العميل / الشركة:", value=f"شركة {selected_ship['company']}")
                     target_phone = st.text_input("رقم الهاتف", value="01212231815")
-                
                 header_greeting = f"مرحباً أستاذ/ة (عناية {target_name})"
             else:
                 active_users_list = [u for u in st.session_state['registered_users'] if u['status'] == 'Active']
@@ -1102,42 +1094,43 @@ else:
                     target_u_obj = emp_map[selected_emp_wa]
                     target_name = target_u_obj['full_name']
                     target_phone = target_u_obj['phone_number']
-                    st.info(f"📱 رقم الهاتف المسجل بالنظام لـ ({target_name}): **{target_phone}**")
+                    st.info(f"📱 رقم الهاتف المسجل للنظام لـ ({target_name}): **{target_phone}**")
 
                 header_greeting = f"مرحباً أستاذ/ة {target_name}"
 
-            # القالب الموحد المشتمل على التوقيع المعتمد الثابت
-            fixed_wa_footer = "تحياتنا، فريق U.S.C للتشغيل\nM.Salem"
-            
-            wa_template = (
+            # نص المتن التشغيلي القابل للتعديل فقط بدون التوقيع
+            wa_body_template = (
                 f"{header_greeting}\n\n"
                 f"نود إحاطتكم بالتحديث الخاص بشحنتكم:\n"
                 f"📂 رقم الملف: {selected_ship['file_num']}\n"
                 f"🔖 اسم الشركة: {selected_ship['company']}\n"
                 f"🧾 رقم الفاتورة: {selected_ship['inv']}\n"
                 f"📌 الحالة الحالية: {selected_ship['status']}\n\n"
-                f"يرجى اتخاذ اللازم إنهاء الإجراء\n\n"
-                f"{fixed_wa_footer}"
+                f"يرجى اتخاذ اللازم إنهاء الإجراء"
             )
 
             with col_wa2:
-                final_msg = st.text_area("نص الرسالة المعاينة قبل الإرسال:", value=wa_template, height=220)
+                user_wa_body = st.text_area("نص رسالة التحديث (قابل للتعديل):", value=wa_body_template, height=180)
+                st.info(f"🔒 التوقيع الرسمي الإداري المدمج تلقائياً بالإرسال:\n\n{OFFICIAL_FIXED_FOOTER}")
 
             if target_phone.strip() != "":
                 clean_phone = format_whatsapp_phone(target_phone)
-                encoded_msg = urllib.parse.quote(final_msg.strip())
+                
+                # إلحاق التوقيع الرسمي الإجباري أوتوماتيكياً بأسفل النص المرسل
+                full_wa_message_with_signature = f"{user_wa_body.strip()}\n\n{OFFICIAL_FIXED_FOOTER}"
+                encoded_msg = urllib.parse.quote(full_wa_message_with_signature)
                 direct_wa_url = f"https://wa.me/{clean_phone}?text={encoded_msg}"
 
                 col_b1, col_b2 = st.columns(2)
                 with col_b1:
-                    st.info(f"رقم المراسلة: **+{clean_phone}**")
+                    st.info(f"رقم المراسلة المعالج: **+{clean_phone}**")
                 with col_b2:
                     if st.link_button("ارسال WhatsApp", direct_wa_url, use_container_width=True):
                         st.session_state['whatsapp_logs'].append({
                             "sender": user['full_name'],
                             "target_name": target_name,
                             "phone": clean_phone,
-                            "text": final_msg.strip(),
+                            "text": full_wa_message_with_signature,
                             "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         })
     # ---------------------------------------------------------
